@@ -89,7 +89,7 @@ def create_app(config_name: str | None = None) -> Flask:
     talisman.init_app(
         app,
         content_security_policy=csp,
-        content_security_policy_nonce_in=["script-src"],
+        content_security_policy_nonce_in=[],
         force_https=app.config.get("SESSION_COOKIE_SECURE", True),
         strict_transport_security=True,
         strict_transport_security_max_age=31536000,
