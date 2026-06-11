@@ -30,6 +30,8 @@ def init_celery(flask_app):
         enable_utc=flask_app.config.get("CELERY_ENABLE_UTC", True),
         task_soft_time_limit=flask_app.config.get("CELERY_TASK_SOFT_TIME_LIMIT", 300),
         task_time_limit=flask_app.config.get("CELERY_TASK_TIME_LIMIT", 360),
+        # Match the queue name the worker listens on (--queues=default)
+        task_default_queue="default",
     )
 
     class ContextTask(celery_app.Task):
