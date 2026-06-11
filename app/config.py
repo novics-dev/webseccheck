@@ -95,10 +95,13 @@ class BaseConfig:
     # -------------------------------------------------------------------------
     CSP_POLICY: dict = {
         "default-src": "'self'",
-        "script-src": ["'self'", "'strict-dynamic'"],
-        "style-src": ["'self'", "'unsafe-inline'"],  # Bootstrap inline styles
+        # 'strict-dynamic' + nonce handles self scripts; cdn.jsdelivr.net for Bootstrap JS
+        "script-src": ["'self'", "'strict-dynamic'", "https://cdn.jsdelivr.net"],
+        # Bootstrap CSS and icons from jsdelivr; unsafe-inline needed for Bootstrap utilities
+        "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+        # Bootstrap icons font files
+        "font-src": ["'self'", "https://cdn.jsdelivr.net"],
         "img-src": ["'self'", "data:"],
-        "font-src": "'self'",
         "connect-src": "'self'",
         "frame-ancestors": "'none'",
         "base-uri": "'self'",
