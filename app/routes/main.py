@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, abort, jsonify, make_response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from app.models import db, ScanPermission, Scan, ScanCheck, ScanLog
+from app import db
+from app.models import ScanPermission, Scan, ScanCheck, ScanLog
 from app.services.email_service import send_permission_confirmation
 from app.services.report import generate_pdf_report
 import re
