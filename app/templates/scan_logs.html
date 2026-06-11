@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Scan Logs — {{ scan.target_url }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+  <div>
+    <h4 class="mb-1"><i class="bi bi-terminal me-2 text-secondary"></i>Scan Logs</h4>
+    <p class="text-muted small mb-0">
+      Scan ID: <code>{{ scan.id }}</code>
+      &bull;
+      Target: <a href="{{ scan.target_url }}" target="_blank" rel="noopener noreferrer">{{ scan.target_url }}</a>
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('main.scan_report', scan_id=scan.id) }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Back to Report
+    </a>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card shadow-sm mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto">
+        <label for="level-filter" class="col-form-label col-form-label-sm fw-semibold">Level:</label>
+      </div>
+      <div class="col-auto">
+        <select id="level-filter" class="form-select form-select-sm" style="min-width:130px">
+          <option value="all">All Levels</option>
+          <option value="info">Info</option>
+          <option value="warning">Warning</option>
+          <option value="error">Error</option>
+          <option value="debug">Debug</option>
+        </select>
+      </div>
+      <div class="col">
+        <input type="text" id="log-search" class="form-control form-control-sm" placeholder="Search messages...">
+      </div>
+      <div class="col-auto">
+        <button id="auto-scroll-btn" class="btn btn-outline-secondary btn-sm" title="Toggle auto-scroll">
+          <i class="bi bi-arrow-down-circle me-1"></i>Auto-scroll
+          <span class="badge bg-success ms-1" id="autoscroll-indicator">ON</span>
+        </button>
+      </div>
+      <div class="col-auto text-muted small" id="visible-count">
+        Showing {{ logs | length }} entries
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Log Table -->
+<div class="card shadow-sm">
+  <div class="table-responsive" id="log-table-wrapper" style="max-height: 70vh; overflow-y: auto;">
+    <table class="table table-sm table-hover align-middle mb-0" id="log-table">
+      <thead class="table-dark sticky-top">
+        <tr>
+          <th style="width:175px">Timestamp</th>
+          <th style="width:90px">Level</th>
+          <th style="width:160px">Step</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody id="log-tbody">
+        {% for log in logs %}
+        <tr class="log-table-row-{{ log.level.lower() }}" data-level="{{ log.level.lower() }}">
+          <td class="text-muted small font-monospace text-nowrap">
+            {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else '—' }}
+          </td>
+          <td>
+            {% set lvl = log.level.lower() %}
+            {% if lvl == 'error' %}
+            <span class="badge bg-danger">ERROR</span>
+            {% elif lvl == 'warning' %}
+            <span class="badge bg-warning text-dark">WARN</span>
+            {% elif lvl == 'info' %}
+            <span class="badge bg-info text-dark">INFO</span>
+            {% elif lvl == 'debug' %}
+            <span class="badge bg-secondary">DEBUG</span>
+            {% else %}
+            <span class="badge bg-secondary">{{ log.level.upper() }}</span>
+            {% endif %}
+          </td>
+          <td class="small text-muted">{{ log.step or '—' }}</td>
+          <td class="small text-break">{{ log.message }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-4 d-block mb-2"></i>No log entries found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer text-muted small d-flex justify-content-between">
+    <span>{{ logs | length }} total log entries</span>
+    <span>Scan completed: {{ scan.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC') if scan.completed_at else 'N/A' }}</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  var levelFilter = document.getElementById('level-filter');
+  var searchInput = document.getElementById('log-search');
+  var visibleCount = document.getElementById('visible-count');
+  var wrapper = document.getElementById('log-table-wrapper');
+  var autoScrollBtn = document.getElementById('auto-scroll-btn');
+  var autoScrollIndicator = document.getElementById('autoscroll-indicator');
+  var autoScroll = true;
+
+  function filterLogs() {
+    var level = levelFilter ? levelFilter.value : 'all';
+    var search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    var rows = document.querySelectorAll('#log-tbody tr[data-level]');
+    var visible = 0;
+
+    rows.forEach(function(row) {
+      var rowLevel = row.dataset.level || '';
+      var rowText = row.textContent.toLowerCase();
+      var levelMatch = (level === 'all') || (rowLevel === level);
+      var searchMatch = !search || rowText.indexOf(search) !== -1;
+
+      if (levelMatch && searchMatch) {
+        row.style.display = '';
+        visible++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    if (visibleCount) visibleCount.textContent = 'Showing ' + visible + ' entries';
+  }
+
+  function scrollToBottom() {
+    if (wrapper && autoScroll) {
+      wrapper.scrollTop = wrapper.scrollHeight;
+    }
+  }
+
+  if (levelFilter) levelFilter.addEventListener('change', filterLogs);
+  if (searchInput) searchInput.addEventListener('input', filterLogs);
+
+  if (autoScrollBtn) {
+    autoScrollBtn.addEventListener('click', function() {
+      autoScroll = !autoScroll;
+      if (autoScrollIndicator) {
+        autoScrollIndicator.textContent = autoScroll ? 'ON' : 'OFF';
+        autoScrollIndicator.className = autoScroll ? 'badge bg-success ms-1' : 'badge bg-secondary ms-1';
+      }
+      if (autoScroll) scrollToBottom();
+    });
+  }
+
+  // Pause auto-scroll when user manually scrolls up
+  if (wrapper) {
+    wrapper.addEventListener('scroll', function() {
+      var distFromBottom = wrapper.scrollHeight - wrapper.scrollTop - wrapper.clientHeight;
+      if (distFromBottom > 60 && autoScroll) {
+        autoScroll = false;
+        if (autoScrollIndicator) {
+          autoScrollIndicator.textContent = 'OFF';
+          autoScrollIndicator.className = 'badge bg-secondary ms-1';
+        }
+      }
+    });
+  }
+
+  // Initial scroll to bottom
+  scrollToBottom();
+})();
+</script>
+{% endblock %}

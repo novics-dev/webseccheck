@@ -1,0 +1,36 @@
+[Unit]
+Description=WebSecCheck Celery Worker (Async Scan Runner)
+Documentation=https://github.com/novics-dev/webseccheck
+After=network.target redis.service
+Requires=redis.service
+
+[Service]
+Type=simple
+User=webseccheck
+Group=webseccheck
+WorkingDirectory=/opt/webseccheck
+EnvironmentFile=/opt/webseccheck/.env
+
+ExecStart=/opt/webseccheck/venv/bin/celery \
+    -A celery_worker.celery worker \
+    --loglevel=info \
+    --logfile=/var/log/webseccheck/celery.log \
+    --concurrency=2 \
+    --max-tasks-per-child=50 \
+    --queues=default
+
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/webseccheck /var/log/webseccheck
+
+[Install]
+WantedBy=multi-user.target

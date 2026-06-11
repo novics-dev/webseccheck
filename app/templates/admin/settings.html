@@ -1,0 +1,71 @@
+{% extends "admin/base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block admin_content %}
+<h2 class="mb-4"><i class="bi bi-gear me-2"></i>Settings</h2>
+
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Application Info</strong></div>
+      <div class="card-body">
+        <dl class="row small mb-0">
+          <dt class="col-5">Version</dt><dd class="col-7">1.0.0</dd>
+          <dt class="col-5">Flask ENV</dt><dd class="col-7"><code>{{ config.ENV if config.ENV is defined else config.get('ENV','production') }}</code></dd>
+          <dt class="col-5">Debug Mode</dt><dd class="col-7">{% if config.DEBUG %}<span class="badge bg-warning text-dark">ON</span>{% else %}<span class="badge bg-success">OFF</span>{% endif %}</dd>
+          <dt class="col-5">Database</dt><dd class="col-7"><code class="small">{{ config.SQLALCHEMY_DATABASE_URI.split('///')[-1] if config.SQLALCHEMY_DATABASE_URI else '—' }}</code></dd>
+          <dt class="col-5">Mail Server</dt><dd class="col-7">{{ config.MAIL_SERVER or '<span class="text-danger">Not configured</span>' | safe }}</dd>
+          <dt class="col-5">Redis</dt><dd class="col-7"><code>{{ config.CELERY_BROKER_URL or '—' }}</code></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Configuration File</strong></div>
+      <div class="card-body">
+        <p class="small text-muted mb-2">
+          Application settings are managed via the <code>.env</code> file on the server.
+          Restart services after making changes.
+        </p>
+        <pre class="small bg-light p-2 rounded border mb-0"># /opt/webseccheck/.env
+FLASK_ENV=production
+SECRET_KEY=&lt;auto-generated&gt;
+DATABASE_URL=sqlite:///webseccheck.db
+REDIS_URL=redis://localhost:6379/0
+MAIL_SERVER=smtp.example.com
+MAIL_PORT=587
+MAIL_USE_TLS=true</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card shadow-sm border-warning">
+      <div class="card-header bg-warning text-dark"><strong><i class="bi bi-exclamation-triangle me-2"></i>Scanner Modules</strong></div>
+      <div class="card-body">
+        <p class="small mb-3">Active OWASP Top 10 scanner modules. To add a new scanner, create a module in <code>app/services/scanner/</code> and register it in <code>app/services/scanner/__init__.py</code>.</p>
+        <table class="table table-sm table-bordered mb-0">
+          <thead class="table-light"><tr><th>Category</th><th>Name</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for cat, name in [
+              ('A01','Broken Access Control'),('A02','Cryptographic Failures'),
+              ('A03','Injection'),('A04','Insecure Design'),
+              ('A05','Security Misconfiguration'),('A06','Vulnerable and Outdated Components'),
+              ('A07','Identification and Authentication Failures'),('A08','Software and Data Integrity Failures'),
+              ('A09','Security Logging and Monitoring Failures'),('A10','Server-Side Request Forgery')
+            ] %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ cat }}</span></td>
+              <td>{{ name }}</td>
+              <td><span class="badge bg-success">Active</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-0" style="min-height: calc(100vh - 56px - 76px);">
+
+  <!-- Sidebar -->
+  <div class="col-auto admin-sidebar d-flex flex-column" style="width: 220px;">
+    <div class="py-3">
+      <div class="sidebar-heading">Navigation</div>
+      <nav class="nav flex-column">
+        <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}"
+           href="{{ url_for('admin.dashboard') }}">
+          <i class="bi bi-speedometer2 me-2"></i>Dashboard
+        </a>
+        <a class="nav-link {% if request.endpoint == 'admin.scans' or request.endpoint == 'admin.scan_detail' %}active{% endif %}"
+           href="{{ url_for('admin.scans') }}">
+          <i class="bi bi-radar me-2"></i>All Scans
+        </a>
+        <a class="nav-link {% if request.endpoint == 'admin.permissions' %}active{% endif %}"
+           href="{{ url_for('admin.permissions') }}">
+          <i class="bi bi-file-earmark-lock2 me-2"></i>Permissions
+        </a>
+        <a class="nav-link {% if request.endpoint == 'admin.users' %}active{% endif %}"
+           href="{{ url_for('admin.users') }}">
+          <i class="bi bi-people me-2"></i>Users
+        </a>
+        <a class="nav-link {% if request.endpoint == 'admin.logs' %}active{% endif %}"
+           href="{{ url_for('admin.logs') }}">
+          <i class="bi bi-journal-text me-2"></i>Logs
+        </a>
+      </nav>
+
+      <div class="sidebar-heading mt-3">System</div>
+      <nav class="nav flex-column">
+        <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}"
+           href="{{ url_for('admin.settings') if 'admin.settings' in url_for.__globals__ else '#' }}">
+          <i class="bi bi-gear me-2"></i>Settings
+        </a>
+        <a class="nav-link" href="{{ url_for('main.index') }}">
+          <i class="bi bi-house me-2"></i>Public Site
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Main content area -->
+  <div class="col p-4 bg-light">
+    <!-- Admin breadcrumb / page header -->
+    <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+      <h4 class="mb-0">
+        {% block admin_title %}Admin{% endblock %}
+      </h4>
+      <div class="text-muted small">
+        <i class="bi bi-person-circle me-1"></i>{{ current_user.email }}
+      </div>
+    </div>
+
+    {% block admin_content %}{% endblock %}
+  </div>
+
+</div>
+{% endblock %}

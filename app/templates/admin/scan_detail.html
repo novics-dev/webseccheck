@@ -1,0 +1,113 @@
+{% extends "admin/base.html" %}
+{% block title %}Scan {{ scan.id[:8] }}{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-search me-2"></i>Scan Detail</h2>
+  <div>
+    {% if scan.status == 'completed' %}
+    <a href="{{ url_for('main.scan_report', scan_id=scan.id) }}" class="btn btn-primary btn-sm me-2">
+      <i class="bi bi-file-text me-1"></i>Report
+    </a>
+    {% endif %}
+    <a href="{{ url_for('admin.scans') }}" class="btn btn-outline-secondary btn-sm">Back</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header"><strong>Scan Info</strong></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-4">Scan ID</dt><dd class="col-8"><code>{{ scan.id }}</code></dd>
+          <dt class="col-4">Status</dt><dd class="col-8"><span class="badge status-{{ scan.status }}">{{ scan.status }}</span></dd>
+          <dt class="col-4">Risk Score</dt>
+          <dd class="col-8">
+            <span class="fw-bold {% if scan.risk_score and scan.risk_score >= 80 %}text-danger{% elif scan.risk_score and scan.risk_score >= 60 %}text-warning{% else %}text-success{% endif %}">
+              {{ scan.risk_score or 'N/A' }}{% if scan.risk_score is not none %}/100{% endif %}
+            </span>
+          </dd>
+          <dt class="col-4">Started</dt><dd class="col-8">{{ scan.started_at or '—' }}</dd>
+          <dt class="col-4">Completed</dt><dd class="col-8">{{ scan.completed_at or '—' }}</dd>
+          <dt class="col-4">Checks</dt>
+          <dd class="col-8">
+            <span class="text-success">{{ scan.passed_checks or 0 }} pass</span> ·
+            <span class="text-danger">{{ scan.failed_checks or 0 }} fail</span> ·
+            <span class="text-warning">{{ scan.warning_checks or 0 }} warn</span>
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header"><strong>Permission</strong></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-4">Target URL</dt>
+          <dd class="col-8"><a href="{{ scan.permission.target_url }}" target="_blank" rel="noopener noreferrer">{{ scan.permission.target_url }}</a></dd>
+          <dt class="col-4">Requester</dt><dd class="col-8">{{ scan.permission.requester_name }}</dd>
+          <dt class="col-4">Email</dt><dd class="col-8">{{ scan.permission.requester_email }}</dd>
+          <dt class="col-4">Org</dt><dd class="col-8">{{ scan.permission.organization or '—' }}</dd>
+          <dt class="col-4">Consent</dt>
+          <dd class="col-8">
+            <span class="badge bg-success">Granted {{ scan.permission.consent_timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+          </dd>
+          <dt class="col-4">Source IP</dt><dd class="col-8"><code>{{ scan.permission.ip_address }}</code></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Checks table -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header"><strong>Check Results</strong></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr><th>Category</th><th>Check</th><th>Status</th><th>Severity</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          {% for check in checks %}
+          <tr class="check-{{ check.status }}">
+            <td><span class="badge bg-secondary">{{ check.owasp_category }}</span></td>
+            <td class="small">{{ check.check_name }}</td>
+            <td>
+              <span class="badge {% if check.status == 'pass' %}bg-success{% elif check.status == 'fail' %}bg-danger{% elif check.status == 'warning' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                {{ check.status }}
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-{{ check.severity }}">{{ check.severity }}</span>
+            </td>
+            <td class="small">{{ check.description }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-3">No checks recorded yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Logs -->
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between">
+    <strong>Scan Logs</strong>
+    <a href="{{ url_for('main.scan_logs', scan_id=scan.id) }}" class="btn btn-outline-secondary btn-sm">Full Log Viewer</a>
+  </div>
+  <div class="card-body p-0">
+    <div class="log-feed" style="height:200px">
+      {% for log in logs %}
+      <div class="log-{{ log.level }}">[{{ log.timestamp.strftime('%H:%M:%S') }}] [{{ log.level|upper }}] {{ log.message }}</div>
+      {% else %}
+      <div class="text-muted">No logs.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

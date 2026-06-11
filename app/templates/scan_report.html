@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<style>
+.risk-gauge { font-size: 3.5rem; font-weight: 800; }
+.risk-low { color: #198754; }
+.risk-medium { color: #fd7e14; }
+.risk-high { color: #dc3545; }
+.category-header { background: #1a1a2e; color: white; }
+.check-fail { border-left: 4px solid #dc3545; }
+.check-warning { border-left: 4px solid #fd7e14; }
+.check-pass { border-left: 4px solid #198754; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text me-2"></i>Security Scan Report #{{ scan.id }}</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('main.scan_report_pdf', scan_id=scan.id) }}"
+           class="btn btn-danger"><i class="bi bi-file-pdf me-1"></i>Download PDF</a>
+        <a href="{{ url_for('main.scan_logs', scan_id=scan.id) }}"
+           class="btn btn-outline-secondary"><i class="bi bi-journal-text me-1"></i>View Logs</a>
+    </div>
+</div>
+
+<!-- Summary card -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100 text-center p-3">
+            {% set risk = scan.risk_score | int %}
+            <div class="risk-gauge {% if risk >= 70 %}risk-high{% elif risk >= 40 %}risk-medium{% else %}risk-low{% endif %}">
+                {{ risk }}
+            </div>
+            <div class="text-muted">Risk Score / 100</div>
+            <div class="mt-2">
+                {% if risk >= 70 %}
+                <span class="badge bg-danger fs-6">HIGH RISK</span>
+                {% elif risk >= 40 %}
+                <span class="badge bg-warning text-dark fs-6">MEDIUM RISK</span>
+                {% else %}
+                <span class="badge bg-success fs-6">LOW RISK</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr><td class="fw-bold">Target</td>
+                            <td><a href="{{ scan.permission.target_url }}" rel="noopener" target="_blank">{{ scan.permission.target_url }}</a></td></tr>
+                        <tr><td class="fw-bold">Started</td>
+                            <td>{{ scan.started_at.strftime('%Y-%m-%d %H:%M UTC') if scan.started_at else 'N/A' }}</td></tr>
+                        <tr><td class="fw-bold">Completed</td>
+                            <td>{{ scan.completed_at.strftime('%Y-%m-%d %H:%M UTC') if scan.completed_at else 'N/A' }}</td></tr>
+                        <tr><td class="fw-bold">Duration</td>
+                            <td>{{ "%.1f"|format(scan.duration_seconds) ~ 's' if scan.duration_seconds else 'N/A' }}</td></tr>
+                        <tr><td class="fw-bold">Total Checks</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ scan.total_checks }} total</span>
+                                <span class="badge bg-danger">{{ scan.failed_checks }} failed</span>
+                                <span class="badge bg-warning text-dark">{{ scan.warning_checks }} warnings</span>
+                                <span class="badge bg-success">{{ scan.passed_checks }} passed</span>
+                            </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Findings by category -->
+{% for cat_id in ['A01','A02','A03','A04','A05','A06','A07','A08','A09','A10'] %}
+{% if cat_id in categories %}
+{% set cat_checks = categories[cat_id] %}
+<div class="card mb-3">
+    <div class="card-header category-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <span class="badge bg-secondary me-2">{{ cat_id }}</span>
+            {% set owasp_names = {
+                'A01':'Broken Access Control','A02':'Cryptographic Failures',
+                'A03':'Injection','A04':'Insecure Design',
+                'A05':'Security Misconfiguration','A06':'Vulnerable Components',
+                'A07':'Auth Failures','A08':'Integrity Failures',
+                'A09':'Logging Failures','A10':'SSRF'} %}
+            {{ owasp_names.get(cat_id, cat_id) }}
+        </h5>
+        <div>
+            {% set failed = cat_checks | selectattr('status','eq','fail') | list %}
+            {% set warnings = cat_checks | selectattr('status','eq','warning') | list %}
+            {% if failed %}<span class="badge bg-danger">{{ failed|length }} failed</span>{% endif %}
+            {% if warnings %}<span class="badge bg-warning text-dark ms-1">{{ warnings|length }} warning</span>{% endif %}
+        </div>
+    </div>
+    <div class="accordion" id="accordion-{{ cat_id }}">
+        {% for check in cat_checks %}
+        <div class="accordion-item check-{{ check.status }}">
+            <h2 class="accordion-header">
+                <button class="accordion-button {% if check.status not in ('fail','warning') %}collapsed{% endif %} py-2"
+                        type="button" data-bs-toggle="collapse"
+                        data-bs-target="#check-{{ check.id }}">
+                    <div class="d-flex align-items-center gap-2 flex-wrap w-100 me-2">
+                        <span class="badge bg-{{ check.status | status_class }}">{{ check.status | upper }}</span>
+                        <span class="badge bg-{{ check.severity | severity_class }}">{{ check.severity | upper }}</span>
+                        <span>{{ check.check_name }}</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="check-{{ check.id }}" class="accordion-collapse collapse {% if check.status in ('fail','warning') %}show{% endif %}">
+                <div class="accordion-body">
+                    <p>{{ check.description }}</p>
+                    {% if check.evidence %}
+                    <div class="mb-2">
+                        <strong>Evidence:</strong>
+                        <code class="d-block p-2 bg-light border rounded small">{{ check.evidence }}</code>
+                    </div>
+                    {% endif %}
+                    {% if check.remediation %}
+                    <div class="alert alert-info py-2 mb-0">
+                        <strong><i class="bi bi-wrench me-1"></i>Remediation:</strong>
+                        {{ check.remediation }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

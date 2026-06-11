@@ -1,0 +1,53 @@
+{% extends "admin/base.html" %}
+{% block title %}Permissions{% endblock %}
+
+{% block admin_content %}
+<h2 class="mb-4"><i class="bi bi-clipboard-check me-2"></i>Test Permissions</h2>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    {% if permissions.items %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr><th>ID</th><th>Target URL</th><th>Requester</th><th>Email</th><th>Org</th><th>Consent Time</th><th>IP</th><th>Scans</th></tr>
+        </thead>
+        <tbody>
+          {% for p in permissions.items %}
+          <tr>
+            <td><code class="small">{{ p.id[:8] }}</code></td>
+            <td class="text-truncate" style="max-width:180px">
+              <a href="{{ p.target_url }}" target="_blank" rel="noopener noreferrer">{{ p.target_url }}</a>
+            </td>
+            <td>{{ p.requester_name }}</td>
+            <td class="small">{{ p.requester_email }}</td>
+            <td class="small">{{ p.organization or '—' }}</td>
+            <td class="small text-muted">{{ p.consent_timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td><code class="small">{{ p.ip_address }}</code></td>
+            <td>{{ p.scans | length }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if permissions.pages > 1 %}
+    <div class="d-flex justify-content-center py-3">
+      <nav><ul class="pagination pagination-sm mb-0">
+        {% for pg in permissions.iter_pages() %}
+          {% if pg %}
+          <li class="page-item {% if pg == permissions.page %}active{% endif %}">
+            <a class="page-link" href="?page={{ pg }}">{{ pg }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endfor %}
+      </ul></nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-1 d-block mb-2"></i>No permissions recorded yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

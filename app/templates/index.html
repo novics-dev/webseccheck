@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Warning banner -->
+        <div class="alert alert-warning border-warning" role="alert">
+            <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>Responsible Use Notice</h5>
+            <p class="mb-0">
+                This tool is intended <strong>exclusively for authorized security testing</strong>.
+                Scanning systems you do not own or have explicit written permission to test is
+                <strong>illegal and unethical</strong>. By submitting this form you confirm that
+                you are authorized to test the target.
+            </p>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0"><i class="bi bi-shield-check me-2"></i>New Security Scan</h4>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-4">
+                    Complete the form below to begin an OWASP Top 10 automated security assessment.
+                    A confirmation email will be sent to the address provided.
+                </p>
+
+                <form method="POST" action="{{ url_for('main.scan_permission') }}" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <!-- Target URL -->
+                    <div class="mb-3">
+                        <label for="target_url" class="form-label fw-semibold">
+                            Target URL <span class="text-danger">*</span>
+                        </label>
+                        {{ form.target_url(class="form-control" + (" is-invalid" if form.target_url.errors else ""),
+                           id="target_url", placeholder="https://example.com",
+                           autocomplete="off") }}
+                        {% for error in form.target_url.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Must be an external URL. Internal/localhost addresses are not permitted.</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <!-- Full Name -->
+                        <div class="col-md-6">
+                            <label for="requester_name" class="form-label fw-semibold">
+                                Full Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.requester_name(class="form-control" + (" is-invalid" if form.requester_name.errors else ""),
+                               id="requester_name", placeholder="Jane Smith") }}
+                            {% for error in form.requester_name.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Organization -->
+                        <div class="col-md-6">
+                            <label for="organization" class="form-label fw-semibold">
+                                Organization <span class="text-danger">*</span>
+                            </label>
+                            {{ form.organization(class="form-control" + (" is-invalid" if form.organization.errors else ""),
+                               id="organization", placeholder="Acme Corp") }}
+                            {% for error in form.organization.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label for="requester_email" class="form-label fw-semibold">
+                            Email Address <span class="text-danger">*</span>
+                        </label>
+                        {{ form.requester_email(class="form-control" + (" is-invalid" if form.requester_email.errors else ""),
+                           id="requester_email", placeholder="jane@example.com",
+                           type="email") }}
+                        {% for error in form.requester_email.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Report will be sent to this address.</div>
+                    </div>
+
+                    <!-- Scope description -->
+                    <div class="mb-4">
+                        <label for="scope_description" class="form-label fw-semibold">
+                            Scope Description <span class="text-muted fw-normal">(optional)</span>
+                        </label>
+                        {{ form.scope_description(class="form-control", id="scope_description",
+                           rows=3, placeholder="Describe the scope of the test, e.g. production web application...") }}
+                    </div>
+
+                    <!-- Consent -->
+                    <div class="mb-4 p-3 border rounded bg-light">
+                        <div class="form-check">
+                            {{ form.explicit_consent(class="form-check-input" + (" is-invalid" if form.explicit_consent.errors else ""),
+                               id="explicit_consent") }}
+                            <label class="form-check-label fw-semibold" for="explicit_consent">
+                                {{ form.explicit_consent.label.text }}
+                            </label>
+                            {% for error in form.explicit_consent.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-play-circle me-2"></i>Record Permission &amp; Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- OWASP categories info -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Checks Performed</h5>
+            </div>
+            <div class="card-body">
+                <div class="row row-cols-2 row-cols-md-3 g-2">
+                    {% for code, name in [
+                        ('A01','Broken Access Control'),
+                        ('A02','Cryptographic Failures'),
+                        ('A03','Injection'),
+                        ('A04','Insecure Design'),
+                        ('A05','Security Misconfiguration'),
+                        ('A06','Vulnerable Components'),
+                        ('A07','Auth Failures'),
+                        ('A08','Integrity Failures'),
+                        ('A09','Logging Failures'),
+                        ('A10','SSRF'),
+                    ] %}
+                    <div class="col">
+                        <span class="badge bg-secondary me-1">{{ code }}</span>
+                        <small>{{ name }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
