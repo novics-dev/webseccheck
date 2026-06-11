@@ -21,10 +21,13 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-brand-fortrisk">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('main.index') }}">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.index') }}">
                 <img src="https://www.fortrisk.nl/uploads/SiGA5YgT/320x0_320x0/logo2__msi___png.webp"
-                     alt="Fortrisk" height="36"
-                     onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/fortrisk-logo.svg') }}'">
+                     alt="Fortrisk" height="32" id="nav-logo"
+                     onerror="this.style.display='none';document.getElementById('nav-logo-text').style.display='inline';">
+                <span id="nav-logo-text" class="fw-bold d-none" style="color:white;font-size:1.2rem;">
+                    <span style="color:#4fc3f7;">fort</span>risk
+                </span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                     data-bs-target="#navbarMain" aria-controls="navbarMain"
@@ -86,7 +89,7 @@
             <small>
                 <img src="https://www.fortrisk.nl/uploads/SiGA5YgT/320x0_320x0/logo2__msi___png.webp"
                      alt="Fortrisk" height="20" class="me-2 opacity-75"
-                     onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/fortrisk-logo.svg') }}'">
+                     onerror="this.style.display='none'">
                 Fortrisk CyberScan &mdash; OWASP Top 10 Security Scanner &mdash;
                 Authorized testing only &mdash; &copy; {{ now().year if now is defined else 2026 }} Fortrisk
             </small>
