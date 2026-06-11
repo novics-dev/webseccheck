@@ -97,8 +97,8 @@
 <script>
     initScanStatus(
         {{ scan.id }},
-        "{{ url_for('api_scan_status', scan_id=scan.id) }}",
-        "{{ url_for('api_scan_logs', scan_id=scan.id) }}",
+        "{{ url_for('main.api_scan_status', scan_id=scan.id) }}",
+        "{{ url_for('main.api_scan_logs', scan_id=scan.id) }}",
         "{{ url_for('main.scan_report', scan_id=scan.id) }}"
     );
 </script>
