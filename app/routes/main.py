@@ -9,6 +9,7 @@ import re
 from datetime import datetime
 
 main = Blueprint('main', __name__)
+main_bp = main  # alias used by app factory
 
 
 def is_private_or_localhost(url):
