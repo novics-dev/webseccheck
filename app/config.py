@@ -98,7 +98,7 @@ class BaseConfig:
         "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
         "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
         "font-src": ["'self'", "https://cdn.jsdelivr.net"],
-        "img-src": ["'self'", "data:"],
+        "img-src": ["'self'", "data:", "https://www.fortrisk.nl"],
         "connect-src": ["'self'", "https://cdn.jsdelivr.net"],
         "frame-ancestors": "'none'",
         "base-uri": "'self'",
