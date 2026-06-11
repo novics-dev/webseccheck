@@ -86,7 +86,7 @@
               <span class="text-warning ms-1">{{ scan.warning_checks }}!</span>
               {% else %}—{% endif %}
             </td>
-            <td class="small text-muted">{{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="small text-muted">{{ scan.created_at.strftime('%Y-%m-%d %H:%M') if scan.created_at else '—' }}</td>
             <td>
               <a href="{{ url_for('admin.scan_detail', scan_id=scan.id) }}" class="btn btn-outline-primary btn-sm">View</a>
             </td>

@@ -15,14 +15,14 @@
         <tbody>
           {% for p in permissions.items %}
           <tr>
-            <td><code class="small">{{ p.id[:8] }}</code></td>
+            <td><code class="small">{{ p.id }}</code></td>
             <td class="text-truncate" style="max-width:180px">
               <a href="{{ p.target_url }}" target="_blank" rel="noopener noreferrer">{{ p.target_url }}</a>
             </td>
             <td>{{ p.requester_name }}</td>
             <td class="small">{{ p.requester_email }}</td>
             <td class="small">{{ p.organization or '—' }}</td>
-            <td class="small text-muted">{{ p.consent_timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="small text-muted">{{ p.consent_timestamp.strftime('%Y-%m-%d %H:%M') if p.consent_timestamp else '—' }}</td>
             <td><code class="small">{{ p.ip_address }}</code></td>
             <td>{{ p.scans | length }}</td>
           </tr>
