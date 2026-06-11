@@ -14,9 +14,10 @@
         <label class="form-label small">Status</label>
         <select name="status" class="form-select form-select-sm">
           <option value="">All</option>
-          {% for s in ['pending','running','completed','failed'] %}
-          <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>{{ s|capitalize }}</option>
-          {% endfor %}
+          <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Pending</option>
+          <option value="running" {% if request.args.get('status') == 'running' %}selected{% endif %}>Running</option>
+          <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Completed</option>
+          <option value="failed" {% if request.args.get('status') == 'failed' %}selected{% endif %}>Failed</option>
         </select>
       </div>
       <div class="col-auto">
@@ -42,8 +43,12 @@
           {% for scan in scans %}
           <tr>
             <td><code class="small">#{{ scan.id }}</code></td>
-            <td class="text-truncate" style="max-width:180px">{{ scan.permission.target_url if scan.permission else '—' }}</td>
-            <td class="small">{{ scan.permission.requester_email if scan.permission else '—' }}</td>
+            <td class="text-truncate" style="max-width:180px">
+              {% if scan.permission %}{{ scan.permission.target_url }}{% else %}—{% endif %}
+            </td>
+            <td class="small">
+              {% if scan.permission %}{{ scan.permission.requester_email }}{% else %}—{% endif %}
+            </td>
             <td><span class="badge status-{{ scan.status }}">{{ scan.status }}</span></td>
             <td>
               {% if scan.risk_score is not none %}
@@ -57,11 +62,13 @@
               <span class="text-danger">{{ scan.failed_checks or 0 }}</span> /
               <span class="text-warning">{{ scan.warning_checks or 0 }}</span>
             </td>
-            <td class="small text-muted">{{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="small text-muted">
+              {% if scan.created_at %}{{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}
+            </td>
             <td>
               <a href="{{ url_for('admin.scan_detail', scan_id=scan.id) }}" class="btn btn-outline-primary btn-sm me-1">View</a>
               <form method="POST" action="{{ url_for('admin.scan_delete', scan_id=scan.id) }}" class="d-inline"
-                    onsubmit="return confirm('Delete this scan and all its data?')">
+                    onsubmit="return confirm('Delete scan #{{ scan.id }}?')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-outline-danger btn-sm">Del</button>
               </form>
@@ -71,8 +78,7 @@
         </tbody>
       </table>
     </div>
-    <!-- Pagination -->
-    {% if pagination.pages > 1 %}
+    {% if pagination and pagination.pages > 1 %}
     <div class="d-flex justify-content-center py-3">
       <nav>
         <ul class="pagination pagination-sm mb-0">

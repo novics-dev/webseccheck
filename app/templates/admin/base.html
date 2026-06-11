@@ -33,7 +33,7 @@
       <div class="sidebar-heading mt-3">System</div>
       <nav class="nav flex-column">
         <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}"
-           href="{{ url_for('admin.settings') if 'admin.settings' in url_for.__globals__ else '#' }}">
+           href="{{ url_for('admin.settings') }}">
           <i class="bi bi-gear me-2"></i>Settings
         </a>
         <a class="nav-link" href="{{ url_for('main.index') }}">
