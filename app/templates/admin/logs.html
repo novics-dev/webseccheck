@@ -38,7 +38,7 @@
       <div class="log-{{ log.level }}">
         [{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}]
         [{{ log.level|upper }}]
-        [{{ log.scan_id[:8] if log.scan_id else 'system' }}]
+        [{{ log.scan_id if log.scan_id else 'system' }}]
         {% if log.step %}[{{ log.step }}]{% endif %}
         {{ log.message }}
       </div>
@@ -46,12 +46,12 @@
       <div class="text-muted p-3">No logs found.</div>
       {% endfor %}
     </div>
-    {% if logs_pagination and logs_pagination.pages > 1 %}
+    {% if pagination and pagination.pages > 1 %}
     <div class="d-flex justify-content-center py-2 border-top">
       <nav><ul class="pagination pagination-sm mb-0">
-        {% for pg in logs_pagination.iter_pages() %}
+        {% for pg in pagination.iter_pages() %}
           {% if pg %}
-          <li class="page-item {% if pg == logs_pagination.page %}active{% endif %}">
+          <li class="page-item {% if pg == pagination.page %}active{% endif %}">
             <a class="page-link" href="?page={{ pg }}{% if request.args.get('scan_id') %}&scan_id={{ request.args.get('scan_id') }}{% endif %}{% if request.args.get('level') %}&level={{ request.args.get('level') }}{% endif %}">{{ pg }}</a>
           </li>
           {% else %}
@@ -65,7 +65,7 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
   // Auto-scroll to bottom of log feed
   const feed = document.getElementById('log-feed');

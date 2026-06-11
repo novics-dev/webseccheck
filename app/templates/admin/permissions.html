@@ -15,7 +15,7 @@
         <tbody>
           {% for p in permissions.items %}
           <tr>
-            <td><code class="small">{{ p.id[:8] }}</code></td>
+            <td><code class="small">{{ p.id }}</code></td>
             <td class="text-truncate" style="max-width:180px">
               <a href="{{ p.target_url }}" target="_blank" rel="noopener noreferrer">{{ p.target_url }}</a>
             </td>
