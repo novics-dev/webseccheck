@@ -82,7 +82,7 @@ def run_scan(self, scan_id: int):
     6. Sends report email
     """
     from app import db
-    from app.models import Scan, ScanCheck, ScanLog, ScanStatus
+    from app.models import Scan, ScanCheck, ScanLog, ScanStatus, LogLevel
     from app.services.scanner import get_all_scanners
 
     try:
@@ -99,30 +99,48 @@ def run_scan(self, scan_id: int):
         target_url = scan.permission.target_url
         logger.info("Starting scan %d for %s", scan_id, target_url)
 
+        def _write_log(level, message, step=None):
+            try:
+                entry = ScanLog(
+                    scan_id=scan_id,
+                    level=level,
+                    message=message,
+                    step=step,
+                    timestamp=datetime.now(timezone.utc),
+                )
+                db.session.add(entry)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        _write_log(LogLevel.INFO, f"Starting scan for {target_url}", "init")
+
         scanners = get_all_scanners()
         all_check_dicts = []
 
-        for scanner in scanners:
+        for i, scanner in enumerate(scanners, 1):
             logger.info("Running scanner: %s (%s)", scanner.name, scanner.category)
+            _write_log(
+                LogLevel.INFO,
+                f"[{i}/{len(scanners)}] Running {scanner.name} ({scanner.category})",
+                scanner.category,
+            )
             try:
                 check_dicts = scanner.run(target_url, scan_id, db.session)
+                count = len(check_dicts) if check_dicts else 0
                 all_check_dicts.extend(check_dicts or [])
+                _write_log(
+                    LogLevel.INFO,
+                    f"{scanner.name}: {count} check(s) completed",
+                    scanner.category,
+                )
             except Exception as exc:
                 logger.exception("Scanner %s failed: %s", scanner.category, exc)
-                # Log the failure but continue with other scanners
-                try:
-                    from app.models import ScanLog, LogLevel
-                    error_log = ScanLog(
-                        scan_id=scan_id,
-                        level=LogLevel.ERROR,
-                        message=f"Scanner {scanner.category} failed: {exc}",
-                        step=scanner.category,
-                        timestamp=datetime.now(timezone.utc),
-                    )
-                    db.session.add(error_log)
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
+                _write_log(
+                    LogLevel.ERROR,
+                    f"Scanner {scanner.category} failed: {exc}",
+                    scanner.category,
+                )
 
         # Save all ScanCheck results
         saved_checks = []
@@ -167,6 +185,11 @@ def run_scan(self, scan_id: int):
         logger.info(
             "Scan %d completed: %d checks, %d failed, risk=%.1f",
             scan_id, total, failed, risk
+        )
+        _write_log(
+            LogLevel.INFO,
+            f"Scan complete — {total} checks, {passed} passed, {failed} failed, {warnings} warnings. Risk score: {risk:.0f}/100",
+            "complete",
         )
 
         # Send report email (best-effort)
