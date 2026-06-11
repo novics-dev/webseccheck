@@ -42,8 +42,8 @@
           {% for scan in scans %}
           <tr>
             <td><code class="small">#{{ scan.id }}</code></td>
-            <td class="text-truncate" style="max-width:180px">{{ scan.permission.target_url }}</td>
-            <td class="small">{{ scan.permission.requester_email }}</td>
+            <td class="text-truncate" style="max-width:180px">{{ scan.permission.target_url if scan.permission else '—' }}</td>
+            <td class="small">{{ scan.permission.requester_email if scan.permission else '—' }}</td>
             <td><span class="badge status-{{ scan.status }}">{{ scan.status }}</span></td>
             <td>
               {% if scan.risk_score is not none %}
@@ -62,7 +62,7 @@
               <a href="{{ url_for('admin.scan_detail', scan_id=scan.id) }}" class="btn btn-outline-primary btn-sm me-1">View</a>
               <form method="POST" action="{{ url_for('admin.scan_delete', scan_id=scan.id) }}" class="d-inline"
                     onsubmit="return confirm('Delete this scan and all its data?')">
-                {{ csrf_token() }}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-outline-danger btn-sm">Del</button>
               </form>
             </td>
