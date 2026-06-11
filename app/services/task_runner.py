@@ -48,7 +48,7 @@ def init_celery(flask_app):
 # ---------------------------------------------------------------------------
 
 def _calculate_risk_score(checks) -> float:
-    """Calculate 0-100 risk score weighted by severity of failed/warning checks."""
+    """Calculate 0-100 risk score as a percentage of the maximum possible failure weight."""
     weights = {
         "critical": 25,
         "high": 15,
@@ -56,14 +56,18 @@ def _calculate_risk_score(checks) -> float:
         "low": 3,
         "info": 0,
     }
-    total_weight = 0
+    actual_weight = 0
+    max_weight = 0
     for check in checks:
+        severity = check.severity or "info"
+        w = weights.get(severity, 0)
+        max_weight += w
         if check.status in ("fail", "warning"):
-            severity = check.severity or "info"
-            total_weight += weights.get(severity, 0)
+            actual_weight += w
 
-    # Normalise to 0-100 (cap at 100)
-    return min(total_weight, 100)
+    if max_weight == 0:
+        return 0.0
+    return round((actual_weight / max_weight) * 100, 1)
 
 
 # ---------------------------------------------------------------------------
