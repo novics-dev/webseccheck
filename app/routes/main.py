@@ -1,10 +1,13 @@
-from flask import Blueprint, render_template, request, redirect, url_for, abort, jsonify, make_response
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+from flask import Blueprint, render_template, request, redirect, url_for, abort, jsonify, make_response, flash
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField, BooleanField
+from wtforms.validators import DataRequired, Email, URL, Length, ValidationError
 from app import db
 from app.models import ScanPermission, Scan, ScanCheck, ScanLog
 from app.services.email_service import send_permission_confirmation
 from app.services.report import generate_pdf_report
+import ipaddress
+import urllib.parse
 import re
 from datetime import datetime
 
@@ -12,85 +15,97 @@ main = Blueprint('main', __name__)
 main_bp = main  # alias used by app factory
 
 
-def is_private_or_localhost(url):
-    """Returns True if URL points to localhost or private IP ranges."""
-    import ipaddress
-    import urllib.parse
+# ---------------------------------------------------------------------------
+# Permission form
+# ---------------------------------------------------------------------------
+
+class PermissionForm(FlaskForm):
+    target_url = StringField('Target URL', validators=[
+        DataRequired(message='Target URL is required.'),
+        Length(max=2048),
+    ])
+    requester_name = StringField('Full Name', validators=[
+        DataRequired(message='Full name is required.'),
+        Length(max=200),
+    ])
+    organization = StringField('Organization', validators=[
+        DataRequired(message='Organization is required.'),
+        Length(max=200),
+    ])
+    requester_email = StringField('Email Address', validators=[
+        DataRequired(message='Email address is required.'),
+        Email(message='Enter a valid email address.'),
+        Length(max=320),
+    ])
+    scope_description = TextAreaField('Scope Description', validators=[Length(max=2000)])
+    explicit_consent = BooleanField(
+        'I confirm that I am the owner of or have explicit written authorization to conduct '
+        'security testing on the target URL above. I accept full legal responsibility for this test.',
+        validators=[DataRequired(message='You must confirm explicit authorization before testing.')]
+    )
+
+    def validate_target_url(self, field):
+        url = field.data.strip()
+        if not url.startswith(('http://', 'https://')):
+            raise ValidationError('URL must start with http:// or https://')
+        if _is_private_or_localhost(url):
+            raise ValidationError('Scanning localhost or private/internal IP ranges is not permitted.')
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _is_private_or_localhost(url: str) -> bool:
     try:
         parsed = urllib.parse.urlparse(url)
         hostname = parsed.hostname
         if not hostname:
             return True
-        # Check for localhost
         if hostname.lower() in ('localhost', 'localhost.localdomain'):
             return True
         try:
             ip = ipaddress.ip_address(hostname)
-            if ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_reserved:
-                return True
+            return ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_reserved
         except ValueError:
-            # It's a hostname, not an IP - check common private hostnames
             pass
         return False
     except Exception:
         return True
 
 
-def validate_target_url(url):
-    """Validate URL scheme and that it's not private."""
-    if not url:
-        return False, "Target URL is required."
-    if not url.startswith(('http://', 'https://')):
-        return False, "URL must start with http:// or https://"
-    if is_private_or_localhost(url):
-        return False, "Scanning localhost or private IP ranges is not allowed."
-    return True, None
+def _requester_ip() -> str:
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr or ''
 
+
+# ---------------------------------------------------------------------------
+# Public routes
+# ---------------------------------------------------------------------------
 
 @main.route('/')
 def index():
-    return render_template('index.html')
+    form = PermissionForm()
+    return render_template('index.html', form=form)
 
 
 @main.route('/scan/permission', methods=['POST'])
 def scan_permission():
     from flask import current_app
-    target_url = request.form.get('target_url', '').strip()
-    requester_name = request.form.get('requester_name', '').strip()
-    organization = request.form.get('organization', '').strip()
-    requester_email = request.form.get('requester_email', '').strip()
-    scope_description = request.form.get('scope_description', '').strip()
-    consent = request.form.get('consent')
-
-    errors = []
-
-    valid, err = validate_target_url(target_url)
-    if not valid:
-        errors.append(err)
-
-    if not requester_email:
-        errors.append("Requester email is required.")
-    elif not re.match(r'^[^@]+@[^@]+\.[^@]+$', requester_email):
-        errors.append("Invalid email address.")
-
-    if not consent:
-        errors.append("You must confirm you have permission to test the target.")
-
-    if errors:
-        return render_template('index.html', errors=errors, form_data=request.form), 400
-
-    requester_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-    if requester_ip and ',' in requester_ip:
-        requester_ip = requester_ip.split(',')[0].strip()
+    form = PermissionForm()
+    if not form.validate_on_submit():
+        return render_template('index.html', form=form), 400
 
     permission = ScanPermission(
-        target_url=target_url,
-        requester_name=requester_name,
-        organization=organization,
-        requester_email=requester_email,
-        scope_description=scope_description,
+        target_url=form.target_url.data.strip(),
+        requester_name=form.requester_name.data.strip(),
+        organization=form.organization.data.strip(),
+        requester_email=form.requester_email.data.strip(),
+        scope_description=form.scope_description.data.strip(),
         consent_given=True,
-        requester_ip=requester_ip,
+        requester_ip=_requester_ip(),
     )
     db.session.add(permission)
     db.session.commit()
@@ -98,7 +113,7 @@ def scan_permission():
     try:
         send_permission_confirmation(permission)
     except Exception as e:
-        current_app.logger.error(f"Failed to send permission confirmation email: {e}")
+        current_app.logger.error('Failed to send permission confirmation email: %s', e)
 
     return redirect(url_for('main.scan_new', permission_id=permission.id))
 
@@ -140,15 +155,12 @@ def scan_report(scan_id):
     permission = ScanPermission.query.get(scan.permission_id)
     checks = ScanCheck.query.filter_by(scan_id=scan_id).all()
 
-    # Group checks by OWASP category
     categories = {}
     for check in checks:
         cat = check.owasp_category or 'Uncategorized'
-        if cat not in categories:
-            categories[cat] = []
-        categories[cat].append(check)
+        categories.setdefault(cat, []).append(check)
 
-    failed_checks = [c for c in checks if c.status in ('failed', 'warning')]
+    failed_checks = [c for c in checks if c.status in ('failed', 'warning', 'fail')]
 
     return render_template(
         'scan_report.html',
@@ -178,21 +190,22 @@ def scan_logs(scan_id):
     return render_template('scan_logs.html', scan=scan, permission=permission, logs=logs)
 
 
+# ---------------------------------------------------------------------------
+# API endpoints (polled by scan_status.js)
+# ---------------------------------------------------------------------------
+
 @main.route('/api/scan/status/<int:scan_id>')
 def api_scan_status(scan_id):
     scan = Scan.query.get_or_404(scan_id)
-    data = {
+    return jsonify({
         'scan_id': scan.id,
         'status': scan.status,
-        'progress_pct': scan.progress_pct or 0,
         'total_checks': scan.total_checks or 0,
-        'passed': scan.passed_checks or 0,
-        'failed': scan.failed_checks or 0,
-        'warnings': scan.warning_checks or 0,
+        'passed_checks': scan.passed_checks or 0,
+        'failed_checks': scan.failed_checks or 0,
+        'warning_checks': scan.warning_checks or 0,
         'risk_score': scan.risk_score,
-        'current_step': scan.current_step or '',
-    }
-    return jsonify(data)
+    })
 
 
 @main.route('/api/scan/logs/<int:scan_id>')
@@ -206,7 +219,7 @@ def api_scan_logs(scan_id):
         'logs': [
             {
                 'id': log.id,
-                'timestamp': log.timestamp.isoformat() if log.timestamp else None,
+                'timestamp': log.timestamp.strftime('%H:%M:%S') if log.timestamp else '',
                 'level': log.level,
                 'message': log.message,
                 'step': log.step,
