@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>{% block title %}{{ title | default('WebSecCheck') }} — WebSecCheck{% endblock %}</title>
+    <title>{% block title %}{{ title | default('CyberScan') }} — Fortrisk CyberScan{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
           crossorigin="anonymous">
@@ -16,10 +16,10 @@
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-brand-fortrisk">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">
-                <i class="bi bi-shield-check me-1"></i>WebSecCheck
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">
+                <img src="{{ url_for('static', filename='img/fortrisk-logo.svg') }}" alt="Fortrisk" height="34">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                     data-bs-target="#navbarMain" aria-controls="navbarMain"
@@ -76,11 +76,12 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light py-3 mt-5">
+    <footer class="text-light py-3 mt-5">
         <div class="container text-center">
             <small>
-                WebSecCheck &mdash; OWASP Top 10 Security Scanner &mdash;
-                For authorized testing only. &copy; {{ now().year if now is defined else 2025 }}
+                <img src="{{ url_for('static', filename='img/fortrisk-logo.svg') }}" alt="Fortrisk" height="20" class="me-2 opacity-75">
+                Fortrisk CyberScan &mdash; OWASP Top 10 Security Scanner &mdash;
+                Authorized testing only &mdash; &copy; {{ now().year if now is defined else 2026 }} Fortrisk
             </small>
         </div>
     </footer>

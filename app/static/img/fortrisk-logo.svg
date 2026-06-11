@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4fc3f7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1565c0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Shield shape -->
+  <path d="M28 4 L8 12 L8 30 C8 42 18 52 28 56 C38 52 48 42 48 30 L48 12 Z"
+        fill="url(#shieldGrad)" opacity="0.9"/>
+  <!-- Inner shield lines (circuit pattern) -->
+  <circle cx="28" cy="28" r="8" fill="none" stroke="white" stroke-width="1.5" opacity="0.7"/>
+  <circle cx="28" cy="28" r="3" fill="white" opacity="0.8"/>
+  <line x1="28" y1="10" x2="28" y2="20" stroke="white" stroke-width="1.5" opacity="0.6"/>
+  <line x1="28" y1="36" x2="28" y2="46" stroke="white" stroke-width="1.5" opacity="0.6"/>
+  <line x1="10" y1="28" x2="20" y2="28" stroke="white" stroke-width="1.5" opacity="0.6"/>
+  <line x1="36" y1="28" x2="46" y2="28" stroke="white" stroke-width="1.5" opacity="0.6"/>
+  <!-- "fortrisk" text -->
+  <text x="58" y="32" font-family="'Segoe UI', Arial, sans-serif" font-size="20" font-weight="700">
+    <tspan fill="#2c3e6b">fort</tspan><tspan fill="#1a6bb5">risk</tspan>
+  </text>
+  <text x="58" y="46" font-family="'Segoe UI', Arial, sans-serif" font-size="8" fill="#6b7a99" letter-spacing="1">CYBERSECURITY</text>
+</svg>
