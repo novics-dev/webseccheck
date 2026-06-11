@@ -14,7 +14,7 @@
   <div class="col-sm-6 col-lg-3">
     <div class="card border-0 shadow-sm text-center py-3">
       <div class="card-body">
-        <div class="fs-1 fw-bold text-primary">{{ stats.total_scans }}</div>
+        <div class="fs-1 fw-bold text-primary">{{ total_scans }}</div>
         <div class="text-muted small">Total Scans</div>
       </div>
     </div>
@@ -22,15 +22,15 @@
   <div class="col-sm-6 col-lg-3">
     <div class="card border-0 shadow-sm text-center py-3">
       <div class="card-body">
-        <div class="fs-1 fw-bold text-success">{{ stats.completed_scans }}</div>
-        <div class="text-muted small">Completed</div>
+        <div class="fs-1 fw-bold text-info">{{ today_scans }}</div>
+        <div class="text-muted small">Today's Scans</div>
       </div>
     </div>
   </div>
   <div class="col-sm-6 col-lg-3">
     <div class="card border-0 shadow-sm text-center py-3">
       <div class="card-body">
-        <div class="fs-1 fw-bold text-warning">{{ stats.avg_risk_score | round(1) }}</div>
+        <div class="fs-1 fw-bold text-warning">{{ avg_risk }}</div>
         <div class="text-muted small">Avg Risk Score</div>
       </div>
     </div>
@@ -38,7 +38,7 @@
   <div class="col-sm-6 col-lg-3">
     <div class="card border-0 shadow-sm text-center py-3">
       <div class="card-body">
-        <div class="fs-1 fw-bold text-danger">{{ stats.failed_scans }}</div>
+        <div class="fs-1 fw-bold text-danger">{{ failed_scans if failed_scans is defined else 0 }}</div>
         <div class="text-muted small">Failed Scans</div>
       </div>
     </div>
@@ -57,31 +57,25 @@
       <table class="table table-hover mb-0">
         <thead class="table-light">
           <tr>
-            <th>ID</th>
-            <th>Target URL</th>
-            <th>Status</th>
-            <th>Risk</th>
-            <th>Checks</th>
-            <th>Date</th>
-            <th></th>
+            <th>ID</th><th>Target URL</th><th>Status</th><th>Risk</th><th>Checks</th><th>Date</th><th></th>
           </tr>
         </thead>
         <tbody>
           {% for scan in recent_scans %}
           <tr>
-            <td><code class="small">{{ scan.id[:8] }}</code></td>
+            <td><code class="small">#{{ scan.id }}</code></td>
             <td class="text-truncate" style="max-width:200px">
+              {% if scan.permission %}
               <a href="{{ scan.permission.target_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
                 {{ scan.permission.target_url }}
               </a>
+              {% else %}—{% endif %}
             </td>
-            <td>
-              <span class="badge status-{{ scan.status }}">{{ scan.status }}</span>
-            </td>
+            <td><span class="badge status-{{ scan.status }}">{{ scan.status }}</span></td>
             <td>
               {% if scan.risk_score is not none %}
               <span class="fw-bold {% if scan.risk_score >= 80 %}text-danger{% elif scan.risk_score >= 60 %}text-warning{% elif scan.risk_score >= 40 %}text-info{% else %}text-success{% endif %}">
-                {{ scan.risk_score }}
+                {{ scan.risk_score | int }}
               </span>
               {% else %}<span class="text-muted">—</span>{% endif %}
             </td>
