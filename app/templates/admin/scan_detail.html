@@ -28,8 +28,8 @@
               {{ scan.risk_score or 'N/A' }}{% if scan.risk_score is not none %}/100{% endif %}
             </span>
           </dd>
-          <dt class="col-4">Started</dt><dd class="col-8">{{ scan.started_at or '—' }}</dd>
-          <dt class="col-4">Completed</dt><dd class="col-8">{{ scan.completed_at or '—' }}</dd>
+          <dt class="col-4">Started</dt><dd class="col-8">{{ scan.started_at.strftime('%Y-%m-%d %H:%M:%S') if scan.started_at else '—' }}</dd>
+          <dt class="col-4">Completed</dt><dd class="col-8">{{ scan.completed_at.strftime('%Y-%m-%d %H:%M:%S') if scan.completed_at else '—' }}</dd>
           <dt class="col-4">Checks</dt>
           <dd class="col-8">
             <span class="text-success">{{ scan.passed_checks or 0 }} pass</span> ·
