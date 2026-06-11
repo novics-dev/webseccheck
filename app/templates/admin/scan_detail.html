@@ -1,5 +1,5 @@
 {% extends "admin/base.html" %}
-{% block title %}Scan {{ scan.id[:8] }}{% endblock %}
+{% block title %}Scan #{{ scan.id }}{% endblock %}
 
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -52,7 +52,7 @@
           <dt class="col-4">Org</dt><dd class="col-8">{{ scan.permission.organization or '—' }}</dd>
           <dt class="col-4">Consent</dt>
           <dd class="col-8">
-            <span class="badge bg-success">Granted {{ scan.permission.consent_timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+            <span class="badge bg-success">Granted {% if scan.permission.consent_timestamp %}{{ scan.permission.consent_timestamp.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}</span>
           </dd>
           <dt class="col-4">Source IP</dt><dd class="col-8"><code>{{ scan.permission.ip_address }}</code></dd>
         </dl>
