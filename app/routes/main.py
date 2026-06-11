@@ -125,6 +125,7 @@ def scan_new(permission_id):
 
 @main.route('/scan/start/<int:permission_id>', methods=['POST'])
 def scan_start(permission_id):
+    from flask import current_app
     from app.services.task_runner import run_scan
     permission = ScanPermission.query.get_or_404(permission_id)
 
@@ -136,7 +137,18 @@ def scan_start(permission_id):
     db.session.add(scan)
     db.session.commit()
 
-    run_scan.delay(scan.id)
+    try:
+        run_scan.delay(scan.id)
+    except Exception as e:
+        current_app.logger.error('Failed to queue scan task (Redis/Celery unavailable): %s', e)
+        scan.status = 'failed'
+        db.session.commit()
+        flash(
+            'Could not queue the scan — the background worker is unavailable. '
+            'Please ensure Redis and the Celery worker are running, then try again.',
+            'error'
+        )
+        return redirect(url_for('main.scan_new', permission_id=permission_id))
 
     return redirect(url_for('main.scan_status', scan_id=scan.id))
 
