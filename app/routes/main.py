@@ -103,9 +103,8 @@ def scan_permission():
         requester_name=form.requester_name.data.strip(),
         organization=form.organization.data.strip(),
         requester_email=form.requester_email.data.strip(),
-        scope_description=form.scope_description.data.strip(),
-        consent_given=True,
-        requester_ip=_requester_ip(),
+        explicit_consent=True,
+        ip_address=_requester_ip(),
     )
     db.session.add(permission)
     db.session.commit()
