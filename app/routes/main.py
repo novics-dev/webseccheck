@@ -98,12 +98,14 @@ def scan_permission():
     if not form.validate_on_submit():
         return render_template('index.html', form=form), 400
 
+    from datetime import datetime, timezone
     permission = ScanPermission(
         target_url=form.target_url.data.strip(),
         requester_name=form.requester_name.data.strip(),
         organization=form.organization.data.strip(),
         requester_email=form.requester_email.data.strip(),
         explicit_consent=True,
+        consent_timestamp=datetime.now(timezone.utc),
         ip_address=_requester_ip(),
     )
     db.session.add(permission)
