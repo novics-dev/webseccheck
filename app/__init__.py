@@ -15,6 +15,7 @@ from flask_wtf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # ---------------------------------------------------------------------------
 # Extension instances (created outside the factory so models can import db)
@@ -39,6 +40,7 @@ def create_app(config_name: str | None = None) -> Flask:
                      Defaults to the ``FLASK_ENV`` env-var or 'development'.
     """
     app = Flask(__name__, instance_relative_config=False)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # ------------------------------------------------------------------
     # Configuration
