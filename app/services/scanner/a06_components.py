@@ -60,7 +60,7 @@ class A06ComponentsScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A06:2021',
+                    owasp_category='A06',
                     check_name='JavaScript Library Versions',
                     status='error',
                     severity='medium',
@@ -89,7 +89,7 @@ class A06ComponentsScanner(BaseScanner):
 
             if warnings:
                 return self.create_check(
-                    owasp_category='A06:2021',
+                    owasp_category='A06',
                     check_name='JavaScript Library Versions',
                     status='fail',
                     severity='medium',
@@ -104,7 +104,7 @@ class A06ComponentsScanner(BaseScanner):
                 )
             elif findings:
                 return self.create_check(
-                    owasp_category='A06:2021',
+                    owasp_category='A06',
                     check_name='JavaScript Library Versions',
                     status='info',
                     severity='medium',
@@ -116,7 +116,7 @@ class A06ComponentsScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A06:2021',
+                owasp_category='A06',
                 check_name='JavaScript Library Versions',
                 status='info',
                 severity='medium',
@@ -128,7 +128,7 @@ class A06ComponentsScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A06:2021',
+                owasp_category='A06',
                 check_name='JavaScript Library Versions',
                 status='error',
                 severity='medium',
@@ -168,7 +168,7 @@ class A06ComponentsScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A06:2021',
+                    owasp_category='A06',
                     check_name='CMS Detection',
                     status='error',
                     severity='low',
@@ -189,7 +189,7 @@ class A06ComponentsScanner(BaseScanner):
 
             if detected_cms:
                 return self.create_check(
-                    owasp_category='A06:2021',
+                    owasp_category='A06',
                     check_name='CMS Detection',
                     status='info',
                     severity='low',
@@ -204,7 +204,7 @@ class A06ComponentsScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A06:2021',
+                owasp_category='A06',
                 check_name='CMS Detection',
                 status='info',
                 severity='low',
@@ -216,7 +216,7 @@ class A06ComponentsScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A06:2021',
+                owasp_category='A06',
                 check_name='CMS Detection',
                 status='error',
                 severity='low',
@@ -240,7 +240,7 @@ class A06ComponentsScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A06:2021',
+                    owasp_category='A06',
                     check_name='Framework Version Disclosure',
                     status='error',
                     severity='medium',
@@ -257,7 +257,7 @@ class A06ComponentsScanner(BaseScanner):
 
             if found_versions:
                 return self.create_check(
-                    owasp_category='A06:2021',
+                    owasp_category='A06',
                     check_name='Framework Version Disclosure',
                     status='fail',
                     severity='medium',
@@ -272,7 +272,7 @@ class A06ComponentsScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A06:2021',
+                owasp_category='A06',
                 check_name='Framework Version Disclosure',
                 status='pass',
                 severity='medium',
@@ -284,7 +284,7 @@ class A06ComponentsScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A06:2021',
+                owasp_category='A06',
                 check_name='Framework Version Disclosure',
                 status='error',
                 severity='medium',
@@ -304,7 +304,7 @@ class A06ComponentsScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A06:2021',
+                    owasp_category='A06',
                     check_name='Web Server Version Disclosure',
                     status='error',
                     severity='low',
@@ -320,7 +320,7 @@ class A06ComponentsScanner(BaseScanner):
                 server_software = match.group(1)
                 server_version = match.group(2)
                 return self.create_check(
-                    owasp_category='A06:2021',
+                    owasp_category='A06',
                     check_name='Web Server Version Disclosure',
                     status='fail',
                     severity='low',
@@ -336,7 +336,7 @@ class A06ComponentsScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A06:2021',
+                owasp_category='A06',
                 check_name='Web Server Version Disclosure',
                 status='pass',
                 severity='low',
@@ -348,7 +348,7 @@ class A06ComponentsScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A06:2021',
+                owasp_category='A06',
                 check_name='Web Server Version Disclosure',
                 status='error',
                 severity='low',

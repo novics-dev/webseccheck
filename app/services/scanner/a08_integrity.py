@@ -32,7 +32,7 @@ class A08IntegrityScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A08:2021',
+                    owasp_category='A08',
                     check_name='Subresource Integrity (SRI)',
                     status='error',
                     severity='medium',
@@ -70,7 +70,7 @@ class A08IntegrityScanner(BaseScanner):
 
             if missing_sri:
                 return self.create_check(
-                    owasp_category='A08:2021',
+                    owasp_category='A08',
                     check_name='Subresource Integrity (SRI)',
                     status='fail',
                     severity='medium',
@@ -87,7 +87,7 @@ class A08IntegrityScanner(BaseScanner):
             # Check if there are any external resources at all
             if script_tags or link_tags:
                 return self.create_check(
-                    owasp_category='A08:2021',
+                    owasp_category='A08',
                     check_name='Subresource Integrity (SRI)',
                     status='pass',
                     severity='medium',
@@ -98,7 +98,7 @@ class A08IntegrityScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A08:2021',
+                owasp_category='A08',
                 check_name='Subresource Integrity (SRI)',
                 status='info',
                 severity='medium',
@@ -110,7 +110,7 @@ class A08IntegrityScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A08:2021',
+                owasp_category='A08',
                 check_name='Subresource Integrity (SRI)',
                 status='error',
                 severity='medium',
@@ -128,7 +128,7 @@ class A08IntegrityScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A08:2021',
+                    owasp_category='A08',
                     check_name='Content-Type Configuration',
                     status='error',
                     severity='low',
@@ -153,7 +153,7 @@ class A08IntegrityScanner(BaseScanner):
 
             if issues:
                 return self.create_check(
-                    owasp_category='A08:2021',
+                    owasp_category='A08',
                     check_name='Content-Type Configuration',
                     status='fail',
                     severity='low',
@@ -168,7 +168,7 @@ class A08IntegrityScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A08:2021',
+                owasp_category='A08',
                 check_name='Content-Type Configuration',
                 status='pass',
                 severity='low',
@@ -180,7 +180,7 @@ class A08IntegrityScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A08:2021',
+                owasp_category='A08',
                 check_name='Content-Type Configuration',
                 status='error',
                 severity='low',
@@ -209,7 +209,7 @@ class A08IntegrityScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A08:2021',
+                    owasp_category='A08',
                     check_name='Auto-Update Mechanisms',
                     status='error',
                     severity='low',
@@ -227,7 +227,7 @@ class A08IntegrityScanner(BaseScanner):
 
             if found_patterns:
                 return self.create_check(
-                    owasp_category='A08:2021',
+                    owasp_category='A08',
                     check_name='Auto-Update Mechanisms',
                     status='warning',
                     severity='low',
@@ -243,7 +243,7 @@ class A08IntegrityScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A08:2021',
+                owasp_category='A08',
                 check_name='Auto-Update Mechanisms',
                 status='info',
                 severity='low',
@@ -255,7 +255,7 @@ class A08IntegrityScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A08:2021',
+                owasp_category='A08',
                 check_name='Auto-Update Mechanisms',
                 status='error',
                 severity='low',

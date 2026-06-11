@@ -64,7 +64,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='Security Headers',
                     status='error',
                     severity='high',
@@ -103,7 +103,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
             issues = missing + misconfigured
             if issues:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='Security Headers',
                     status='fail',
                     severity='high',
@@ -120,7 +120,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='Security Headers',
                 status='pass',
                 severity='high',
@@ -132,7 +132,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='Security Headers',
                 status='error',
                 severity='high',
@@ -154,7 +154,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='Server Version Disclosure',
                     status='error',
                     severity='low',
@@ -173,7 +173,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
 
             if version_disclosures:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='Server Version Disclosure',
                     status='fail',
                     severity='low',
@@ -189,7 +189,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 )
             elif disclosures:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='Server Version Disclosure',
                     status='warning',
                     severity='low',
@@ -201,7 +201,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='Server Version Disclosure',
                 status='pass',
                 severity='low',
@@ -213,7 +213,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='Server Version Disclosure',
                 status='error',
                 severity='low',
@@ -252,7 +252,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
 
             if exposed:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='Default/Sensitive Files Exposed',
                     status='fail',
                     severity='high',
@@ -268,7 +268,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 )
             elif informational:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='Default/Sensitive Files Exposed',
                     status='info',
                     severity='low',
@@ -280,7 +280,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='Default/Sensitive Files Exposed',
                 status='pass',
                 severity='high',
@@ -292,7 +292,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='Default/Sensitive Files Exposed',
                 status='error',
                 severity='high',
@@ -310,7 +310,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='HTTP TRACE Method',
                     status='error',
                     severity='low',
@@ -322,7 +322,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
             if response.status_code == 200 and ('TRACE' in response.text.upper() or
                                                   'User-Agent' in response.text):
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='HTTP TRACE Method',
                     status='fail',
                     severity='low',
@@ -337,7 +337,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='HTTP TRACE Method',
                 status='pass',
                 severity='low',
@@ -349,7 +349,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='HTTP TRACE Method',
                 status='error',
                 severity='low',
@@ -375,7 +375,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='Directory Listing',
                     status='error',
                     severity='medium',
@@ -388,7 +388,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
             for pattern in listing_patterns:
                 if re.search(pattern, body, re.IGNORECASE):
                     return self.create_check(
-                        owasp_category='A05:2021',
+                        owasp_category='A05',
                         check_name='Directory Listing',
                         status='fail',
                         severity='medium',
@@ -403,7 +403,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                     )
 
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='Directory Listing',
                 status='pass',
                 severity='medium',
@@ -415,7 +415,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='Directory Listing',
                 status='error',
                 severity='medium',
@@ -439,7 +439,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='CORS Policy',
                     status='error',
                     severity='high',
@@ -456,7 +456,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 if acac.lower() == 'true':
                     severity = 'high'
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='CORS Policy',
                     status='fail',
                     severity=severity,
@@ -472,7 +472,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
 
             if acao == evil_origin:
                 return self.create_check(
-                    owasp_category='A05:2021',
+                    owasp_category='A05',
                     check_name='CORS Policy',
                     status='fail',
                     severity='high',
@@ -487,7 +487,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='CORS Policy',
                 status='pass',
                 severity='high',
@@ -499,7 +499,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A05:2021',
+                owasp_category='A05',
                 check_name='CORS Policy',
                 status='error',
                 severity='high',
