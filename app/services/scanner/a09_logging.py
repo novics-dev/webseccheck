@@ -56,7 +56,7 @@ class A09LoggingScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A09:2021',
+                    owasp_category='A09',
                     check_name='Error Information Disclosure',
                     status='error',
                     severity='medium',
@@ -79,7 +79,7 @@ class A09LoggingScanner(BaseScanner):
 
             if found_disclosures:
                 return self.create_check(
-                    owasp_category='A09:2021',
+                    owasp_category='A09',
                     check_name='Error Information Disclosure',
                     status='fail',
                     severity='medium',
@@ -94,7 +94,7 @@ class A09LoggingScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A09:2021',
+                owasp_category='A09',
                 check_name='Error Information Disclosure',
                 status='pass',
                 severity='medium',
@@ -106,7 +106,7 @@ class A09LoggingScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A09:2021',
+                owasp_category='A09',
                 check_name='Error Information Disclosure',
                 status='error',
                 severity='medium',
@@ -159,7 +159,7 @@ class A09LoggingScanner(BaseScanner):
 
             if exposed_logs:
                 return self.create_check(
-                    owasp_category='A09:2021',
+                    owasp_category='A09',
                     check_name='Log File Exposure',
                     status='fail',
                     severity='high',
@@ -174,7 +174,7 @@ class A09LoggingScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A09:2021',
+                owasp_category='A09',
                 check_name='Log File Exposure',
                 status='pass',
                 severity='high',
@@ -186,7 +186,7 @@ class A09LoggingScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A09:2021',
+                owasp_category='A09',
                 check_name='Log File Exposure',
                 status='error',
                 severity='high',
@@ -246,7 +246,7 @@ class A09LoggingScanner(BaseScanner):
 
             if found_traces:
                 return self.create_check(
-                    owasp_category='A09:2021',
+                    owasp_category='A09',
                     check_name='Stack Trace Leakage',
                     status='fail',
                     severity='medium',
@@ -262,7 +262,7 @@ class A09LoggingScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A09:2021',
+                owasp_category='A09',
                 check_name='Stack Trace Leakage',
                 status='pass',
                 severity='medium',
@@ -274,7 +274,7 @@ class A09LoggingScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A09:2021',
+                owasp_category='A09',
                 check_name='Stack Trace Leakage',
                 status='error',
                 severity='medium',

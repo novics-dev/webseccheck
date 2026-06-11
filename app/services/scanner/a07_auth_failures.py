@@ -59,7 +59,7 @@ class A07AuthFailuresScanner(BaseScanner):
             if not login_url:
                 duration_ms = int((time.time() - start) * 1000)
                 return self.create_check(
-                    owasp_category='A07:2021',
+                    owasp_category='A07',
                     check_name='Brute Force Protection',
                     status='info',
                     severity='high',
@@ -111,7 +111,7 @@ class A07AuthFailuresScanner(BaseScanner):
 
             if protection_signals:
                 return self.create_check(
-                    owasp_category='A07:2021',
+                    owasp_category='A07',
                     check_name='Brute Force Protection',
                     status='pass',
                     severity='high',
@@ -123,7 +123,7 @@ class A07AuthFailuresScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Brute Force Protection',
                 status='fail',
                 severity='high',
@@ -140,7 +140,7 @@ class A07AuthFailuresScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Brute Force Protection',
                 status='error',
                 severity='high',
@@ -162,7 +162,7 @@ class A07AuthFailuresScanner(BaseScanner):
 
             if password_params:
                 return self.create_check(
-                    owasp_category='A07:2021',
+                    owasp_category='A07',
                     check_name='Password in URL',
                     status='fail',
                     severity='high',
@@ -177,7 +177,7 @@ class A07AuthFailuresScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Password in URL',
                 status='pass',
                 severity='high',
@@ -189,7 +189,7 @@ class A07AuthFailuresScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Password in URL',
                 status='error',
                 severity='high',
@@ -209,7 +209,7 @@ class A07AuthFailuresScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A07:2021',
+                    owasp_category='A07',
                     check_name='Session Cookie Security',
                     status='error',
                     severity='high',
@@ -235,7 +235,7 @@ class A07AuthFailuresScanner(BaseScanner):
 
             if not session_cookies:
                 return self.create_check(
-                    owasp_category='A07:2021',
+                    owasp_category='A07',
                     check_name='Session Cookie Security',
                     status='info',
                     severity='high',
@@ -262,7 +262,7 @@ class A07AuthFailuresScanner(BaseScanner):
 
             if issues:
                 return self.create_check(
-                    owasp_category='A07:2021',
+                    owasp_category='A07',
                     check_name='Session Cookie Security',
                     status='fail',
                     severity='high',
@@ -278,7 +278,7 @@ class A07AuthFailuresScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Session Cookie Security',
                 status='pass',
                 severity='high',
@@ -290,7 +290,7 @@ class A07AuthFailuresScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Session Cookie Security',
                 status='error',
                 severity='high',
@@ -325,7 +325,7 @@ class A07AuthFailuresScanner(BaseScanner):
             if not login_url:
                 duration_ms = int((time.time() - start) * 1000)
                 return self.create_check(
-                    owasp_category='A07:2021',
+                    owasp_category='A07',
                     check_name='Multi-Factor Authentication',
                     status='info',
                     severity='medium',
@@ -344,7 +344,7 @@ class A07AuthFailuresScanner(BaseScanner):
 
             if mfa_found:
                 return self.create_check(
-                    owasp_category='A07:2021',
+                    owasp_category='A07',
                     check_name='Multi-Factor Authentication',
                     status='pass',
                     severity='medium',
@@ -356,7 +356,7 @@ class A07AuthFailuresScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Multi-Factor Authentication',
                 status='warning',
                 severity='medium',
@@ -372,7 +372,7 @@ class A07AuthFailuresScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Multi-Factor Authentication',
                 status='error',
                 severity='medium',
@@ -402,7 +402,7 @@ class A07AuthFailuresScanner(BaseScanner):
 
             if found_endpoints:
                 return self.create_check(
-                    owasp_category='A07:2021',
+                    owasp_category='A07',
                     check_name='Password Reset Mechanism',
                     status='info',
                     severity='medium',
@@ -417,7 +417,7 @@ class A07AuthFailuresScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Password Reset Mechanism',
                 status='info',
                 severity='medium',
@@ -429,7 +429,7 @@ class A07AuthFailuresScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A07:2021',
+                owasp_category='A07',
                 check_name='Password Reset Mechanism',
                 status='error',
                 severity='medium',
