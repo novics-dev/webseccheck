@@ -23,7 +23,10 @@ from flask_talisman import Talisman
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=None,  # set in init_app from RATELIMIT_STORAGE_URL config
+)
 mail = Mail()
 talisman = Talisman()
 
@@ -103,6 +106,12 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(auth_bp, url_prefix="/auth")
+
+    # ------------------------------------------------------------------
+    # Celery — configure broker URL from Flask config
+    # ------------------------------------------------------------------
+    from app.services.task_runner import init_celery
+    init_celery(app)
 
     # ------------------------------------------------------------------
     # Database — create tables

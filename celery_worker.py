@@ -5,12 +5,8 @@ Start the worker with::
 
     celery -A celery_worker.celery worker --loglevel=info
 
-Or with concurrency tuning::
-
-    celery -A celery_worker.celery worker --loglevel=info --concurrency=4
-
-The Flask application context is pushed before tasks run, giving Celery
-tasks access to ``db``, ``app.config``, and all Flask extensions.
+The Flask app is created here so that init_celery() configures the broker
+URL from the environment before any tasks are registered.
 """
 
 from __future__ import annotations
@@ -19,17 +15,15 @@ import os
 
 from dotenv import load_dotenv
 
-# Load environment variables before anything else.
+# Load .env before importing Flask app so config picks up REDIS_URL etc.
 load_dotenv()
 
 from app import create_app  # noqa: E402
-from app.services.task_runner import celery  # noqa: E402  — imports the Celery instance
+from app.services.task_runner import celery_app as celery  # noqa: E402
 
-# Create the Flask app so all extensions (db, mail, etc.) are configured.
-# The Celery instance in task_runner is already bound to this app via the
-# factory pattern — we just need to ensure the app is created once here.
+# Create Flask app — this calls init_celery() inside create_app(), which
+# sets the broker_url on celery_app from CELERY_BROKER_URL / REDIS_URL.
 flask_app = create_app(config_name=os.environ.get("FLASK_ENV", "production"))
 
-# Push an application context so tasks that touch the database work correctly
-# when the worker process starts up.
+# Push app context so tasks can use db, current_app, etc.
 flask_app.app_context().push()
