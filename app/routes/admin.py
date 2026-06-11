@@ -63,18 +63,19 @@ def dashboard():
     ).count()
 
     completed_scans = Scan.query.filter_by(status=ScanStatus.COMPLETED).all()
+    failed_scans = Scan.query.filter_by(status=ScanStatus.FAILED).count()
     avg_risk = 0.0
     if completed_scans:
-        avg_risk = sum(s.risk_score for s in completed_scans) / len(completed_scans)
+        scores = [s.risk_score for s in completed_scans if s.risk_score is not None]
+        avg_risk = sum(scores) / len(scores) if scores else 0.0
 
-    recent_scans = (
-        Scan.query.order_by(Scan.created_at.desc()).limit(10).all()
-    )
+    recent_scans = Scan.query.order_by(Scan.created_at.desc()).limit(10).all()
 
     return render_template(
         "admin/dashboard.html",
         total_scans=total_scans,
         today_scans=today_scans,
+        failed_scans=failed_scans,
         avg_risk=round(avg_risk, 1),
         recent_scans=recent_scans,
         title="Admin Dashboard",
