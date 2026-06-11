@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Admin Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow mt-5">
+      <div class="card-header bg-dark text-white text-center py-3">
+        <h4 class="mb-0"><i class="bi bi-lock-fill me-2"></i>Admin Login</h4>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label for="email" class="form-label fw-semibold">Email Address</label>
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), id="email", autocomplete="email") }}
+            {% for e in form.email.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+          <div class="mb-4">
+            <label for="password" class="form-label fw-semibold">Password</label>
+            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), id="password", autocomplete="current-password") }}
+            {% for e in form.password.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+          <button type="submit" class="btn btn-dark w-100">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Login
+          </button>
+        </form>
+      </div>
+    </div>
+    <p class="text-center text-muted mt-3 small">
+      <i class="bi bi-shield-check me-1"></i>Restricted area — authorized administrators only.
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,111 +1,76 @@
 {% extends "base.html" %}
-{% block title %}Permission Recorded{% endblock %}
-
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-7">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="bi bi-check-circle me-2"></i>Permission Recorded</h4>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted">
+                    Your scan permission has been recorded. Please review the details below
+                    before starting the scan.
+                </p>
 
-    <!-- Success Banner -->
-    <div class="alert alert-success d-flex align-items-center mb-4 shadow-sm" role="alert">
-      <i class="bi bi-check-circle-fill fs-4 me-3 flex-shrink-0"></i>
-      <div>
-        <h5 class="alert-heading mb-1">Permission Recorded</h5>
-        <p class="mb-0">Your authorization declaration has been logged and timestamped. You may now proceed to start the security scan.</p>
-      </div>
+                <table class="table table-bordered mb-4">
+                    <tbody>
+                        <tr>
+                            <th class="bg-light w-35">Permission ID</th>
+                            <td><code>#{{ permission.id }}</code></td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light">Target URL</th>
+                            <td><a href="{{ permission.target_url }}" rel="noopener" target="_blank">{{ permission.target_url }}</a></td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light">Requester</th>
+                            <td>{{ permission.requester_name }}</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light">Organization</th>
+                            <td>{{ permission.organization }}</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light">Email</th>
+                            <td>{{ permission.requester_email }}</td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light">Consent Given</th>
+                            <td>
+                                {% if permission.consent_timestamp %}
+                                <span class="badge bg-success">Yes</span>
+                                {{ permission.consent_timestamp.strftime('%Y-%m-%d %H:%M UTC') }}
+                                {% else %}
+                                <span class="badge bg-danger">No</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light">Recorded At</th>
+                            <td>{{ permission.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    A confirmation email has been sent to <strong>{{ permission.requester_email }}</strong>.
+                    The scan will test all OWASP Top 10 categories and may take 2-5 minutes.
+                </div>
+
+                <form method="POST" action="{{ url_for('main.scan_start', permission_id=permission.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+                            <i class="bi bi-play-fill me-2"></i>Start Security Scan
+                        </button>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-lg">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-
-    <!-- Permission Details Card -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-dark text-white d-flex align-items-center">
-        <i class="bi bi-file-earmark-lock2-fill me-2"></i>
-        <h5 class="mb-0">Permission Record</h5>
-        <span class="badge bg-success ms-auto">Verified</span>
-      </div>
-      <div class="card-body">
-        <dl class="row mb-0">
-          <dt class="col-sm-4 text-muted">Permission ID</dt>
-          <dd class="col-sm-8">
-            <code class="text-dark">{{ permission.id }}</code>
-          </dd>
-
-          <dt class="col-sm-4 text-muted">Target URL</dt>
-          <dd class="col-sm-8">
-            <a href="{{ permission.target_url }}" target="_blank" rel="noopener noreferrer" class="text-break">
-              {{ permission.target_url }} <i class="bi bi-box-arrow-up-right small"></i>
-            </a>
-          </dd>
-
-          <dt class="col-sm-4 text-muted">Requester</dt>
-          <dd class="col-sm-8">{{ permission.full_name }}</dd>
-
-          <dt class="col-sm-4 text-muted">Email</dt>
-          <dd class="col-sm-8">{{ permission.email }}</dd>
-
-          <dt class="col-sm-4 text-muted">Organization</dt>
-          <dd class="col-sm-8">{{ permission.organization or '<em class="text-muted">Not specified</em>' | safe }}</dd>
-
-          <dt class="col-sm-4 text-muted">Timestamp</dt>
-          <dd class="col-sm-8">
-            <i class="bi bi-clock me-1"></i>{{ permission.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}
-          </dd>
-
-          <dt class="col-sm-4 text-muted">Consent</dt>
-          <dd class="col-sm-8">
-            <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Explicit permission granted</span>
-          </dd>
-
-          {% if permission.scope_notes %}
-          <dt class="col-sm-4 text-muted">Scope / Notes</dt>
-          <dd class="col-sm-8">{{ permission.scope_notes }}</dd>
-          {% endif %}
-        </dl>
-      </div>
-    </div>
-
-    <!-- Email Confirmation Info -->
-    <div class="card border-info mb-4">
-      <div class="card-body d-flex align-items-center">
-        <i class="bi bi-envelope-check-fill text-info fs-4 me-3 flex-shrink-0"></i>
-        <p class="mb-0">
-          A confirmation email has been sent to <strong>{{ permission.email }}</strong> with a copy of this authorization record.
-          Please retain this for your records.
-        </p>
-      </div>
-    </div>
-
-    <!-- Start Scan Form -->
-    <div class="card shadow border-0 mb-4">
-      <div class="card-body text-center py-4">
-        <h5 class="mb-2">Ready to Begin Security Assessment</h5>
-        <p class="text-muted mb-4">
-          <i class="bi bi-hourglass-split me-1"></i>
-          This will initiate active security testing. The scan may take <strong>5–15 minutes</strong> depending on the target.
-        </p>
-
-        <form method="POST" action="{{ url_for('main.start_scan', permission_id=permission.id) }}">
-          {{ form.hidden_tag() }}
-          <button type="submit" class="btn btn-success btn-lg px-5">
-            <i class="bi bi-play-circle-fill me-2"></i>Start Security Scan
-          </button>
-        </form>
-
-        <p class="text-muted small mt-3 mb-0">
-          <i class="bi bi-shield-exclamation me-1"></i>
-          Scans are rate-limited. Only proceed if you are ready to begin testing now.
-        </p>
-      </div>
-    </div>
-
-    <!-- Warning -->
-    <div class="alert alert-warning d-flex align-items-start" role="alert">
-      <i class="bi bi-exclamation-triangle-fill me-2 mt-1 flex-shrink-0"></i>
-      <div class="small">
-        <strong>Important:</strong> This will initiate active security testing against <strong>{{ permission.target_url }}</strong>.
-        Ensure the system is prepared for testing and that all relevant stakeholders have been notified.
-        Unauthorized testing remains illegal regardless of this form submission.
-      </div>
-    </div>
-
-  </div>
 </div>
 {% endblock %}

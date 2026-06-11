@@ -1,0 +1,47 @@
+[Unit]
+Description=WebSecCheck OWASP Security Testing Platform (Gunicorn)
+Documentation=https://github.com/novics-dev/webseccheck
+After=network.target redis.service
+Requires=redis.service
+
+[Service]
+Type=simple
+User=webseccheck
+Group=webseccheck
+WorkingDirectory=/opt/webseccheck
+EnvironmentFile=/opt/webseccheck/.env
+
+ExecStart=/opt/webseccheck/venv/bin/gunicorn \
+    --workers 4 \
+    --worker-class gthread \
+    --threads 2 \
+    --bind 127.0.0.1:8000 \
+    --timeout 120 \
+    --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --access-logfile /var/log/webseccheck/gunicorn_access.log \
+    --error-logfile /var/log/webseccheck/gunicorn_error.log \
+    --log-level info \
+    wsgi:app
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=10
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/webseccheck /var/log/webseccheck
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

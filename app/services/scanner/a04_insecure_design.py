@@ -1,9 +1,15 @@
-import time
+"""
+A04 — Insecure Design scanner.
+"""
+
+from __future__ import annotations
+
 import re
+import time
 import uuid
 from urllib.parse import urlparse, urljoin
 
-from .base import BaseScanner
+from app.services.scanner.base import BaseScanner
 
 
 class A04InsecureDesignScanner(BaseScanner):
@@ -20,16 +26,19 @@ class A04InsecureDesignScanner(BaseScanner):
     def description(self) -> str:
         return (
             'Checks for insecure design issues including absent rate limiting, '
-            'verbose error messages, debug mode exposure, default credential forms, '
-            'and account enumeration risks.'
+            'verbose error messages, debug mode exposure, and default error pages.'
         )
 
     def _get_base_url(self, url: str) -> str:
         parsed = urlparse(url)
-        return f"{parsed.scheme}://{parsed.netloc}"
+        return f'{parsed.scheme}://{parsed.netloc}'
+
+    # ------------------------------------------------------------------
+    # Checks
+    # ------------------------------------------------------------------
 
     def check_rate_limiting(self, url: str) -> dict:
-        """Make 10 rapid requests and check for throttling signals."""
+        """Make 6 rapid GET requests and check for throttling signals."""
         start = time.time()
         rate_limit_headers = [
             'x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset',
@@ -41,43 +50,42 @@ class A04InsecureDesignScanner(BaseScanner):
         status_codes = []
 
         try:
-            for i in range(10):
+            for i in range(6):
                 response = self.make_request(url, timeout=8)
                 if response is None:
                     continue
                 status_codes.append(response.status_code)
                 if response.status_code == 429:
                     throttle_found = True
-                    throttle_evidence.append(f"Request {i+1}: HTTP 429 Too Many Requests")
+                    throttle_evidence.append(f'Request {i + 1}: HTTP 429 Too Many Requests')
                     break
                 for header in rate_limit_headers:
                     val = response.headers.get(header)
                     if val:
                         throttle_found = True
-                        throttle_evidence.append(f"{header}: {val}")
+                        throttle_evidence.append(f'{header}: {val}')
 
             duration_ms = int((time.time() - start) * 1000)
 
             if throttle_found:
                 return self.create_check(
-                    owasp_category='A04:2021',
+                    owasp_category='A04',
                     check_name='Rate Limiting',
                     status='pass',
                     severity='medium',
                     description='Rate limiting signals detected.',
                     details='; '.join(throttle_evidence),
-                    remediation='Continue enforcing rate limiting and monitor for abuse.',
                     evidence='; '.join(throttle_evidence),
                     duration_ms=duration_ms,
                 )
 
             return self.create_check(
-                owasp_category='A04:2021',
+                owasp_category='A04',
                 check_name='Rate Limiting',
                 status='warning',
                 severity='medium',
-                description='No rate limiting signals detected after 10 rapid requests.',
-                details=f"10 requests made; status codes: {status_codes}. No 429 or rate-limit headers found.",
+                description='No rate limiting signals detected after 6 rapid requests.',
+                details=f'6 requests made; status codes: {status_codes}. No 429 or rate-limit headers.',
                 remediation=(
                     'Implement rate limiting on all public endpoints. '
                     'Return HTTP 429 with Retry-After header when limits are exceeded.'
@@ -88,9 +96,9 @@ class A04InsecureDesignScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A04:2021',
+                owasp_category='A04',
                 check_name='Rate Limiting',
-                status='error',
+                status='info',
                 severity='medium',
                 description='Error during rate limiting check.',
                 details=str(exc),
@@ -98,84 +106,71 @@ class A04InsecureDesignScanner(BaseScanner):
             )
 
     def check_error_verbosity(self, url: str) -> dict:
-        """Append random UUID path and check for stack traces or system info."""
+        """Probe nonexistent paths and check for stack traces or system info."""
         start = time.time()
-        random_path = f"/webseccheck-probe-{uuid.uuid4().hex}"
         base_url = self._get_base_url(url)
-        test_url = urljoin(base_url, random_path)
-
+        probe_paths = [
+            f'/{uuid.uuid4().hex}',
+            '/error-test',
+        ]
         verbose_patterns = [
             r'Traceback \(most recent call last\)',
             r'File ".*\.py", line \d+',
             r'at .+\(.+\.java:\d+\)',
             r'System\.Web\.HttpException',
-            r'Microsoft\.AspNet',
             r'Internal Server Error.*line \d+',
-            r'DEBUG\s*=\s*True',
             r'raise \w+Exception',
-            r'Exception in thread',
+            r'Exception in',
+            r'Fatal error',
             r'NullPointerException',
-            r'undefined method',
-            r'NoMethodError',
-            r'stack overflow',
             r'Caused by:',
         ]
 
         try:
-            response = self.make_request(test_url, timeout=10)
+            found_patterns = []
+            for path in probe_paths:
+                test_url = urljoin(base_url, path)
+                response = self.make_request(test_url, timeout=10)
+                if response is None:
+                    continue
+                body = response.text
+                for pattern in verbose_patterns:
+                    if re.search(pattern, body, re.IGNORECASE):
+                        found_patterns.append(pattern)
+
             duration_ms = int((time.time() - start) * 1000)
 
-            if response is None:
+            if found_patterns:
                 return self.create_check(
-                    owasp_category='A04:2021',
+                    owasp_category='A04',
                     check_name='Error Verbosity',
-                    status='error',
+                    status='fail',
                     severity='medium',
-                    description='Could not retrieve error response.',
-                    details='No response from target.',
-                    duration_ms=duration_ms,
-                )
-
-            body = response.text
-            found_patterns = []
-            for pattern in verbose_patterns:
-                if re.search(pattern, body, re.IGNORECASE):
-                    found_patterns.append(pattern)
-
-            if found_patterns or response.status_code == 500:
-                status = 'fail' if found_patterns else 'warning'
-                return self.create_check(
-                    owasp_category='A04:2021',
-                    check_name='Error Verbosity',
-                    status=status,
-                    severity='medium',
-                    description='Verbose error information exposed in HTTP response.',
-                    details=f"HTTP {response.status_code}; matched patterns: {', '.join(found_patterns)}",
+                    description='Verbose error information exposed in HTTP responses.',
+                    details=f"Matched patterns: {', '.join(found_patterns)}",
                     remediation=(
                         'Configure custom error pages for all error codes. '
                         'Suppress stack traces and system information in production. '
                         'Log errors server-side rather than exposing them to clients.'
                     ),
-                    evidence=f"Status {response.status_code}; patterns: {', '.join(found_patterns[:3])}",
+                    evidence=f"Patterns: {', '.join(found_patterns[:3])}",
                     duration_ms=duration_ms,
                 )
 
             return self.create_check(
-                owasp_category='A04:2021',
+                owasp_category='A04',
                 check_name='Error Verbosity',
                 status='pass',
                 severity='medium',
-                description='Error response does not expose verbose system information.',
-                details=f"HTTP {response.status_code} returned without stack trace or system details.",
-                remediation='Ensure all error pages are generic and reveal no internal details.',
+                description='Error responses do not expose verbose system information.',
                 duration_ms=duration_ms,
             )
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A04:2021',
+                owasp_category='A04',
                 check_name='Error Verbosity',
-                status='error',
+                status='info',
                 severity='medium',
                 description='Error during error verbosity check.',
                 details=str(exc),
@@ -196,6 +191,7 @@ class A04InsecureDesignScanner(BaseScanner):
             r'Symfony Profiler',
             r'laravel-debugbar',
             r'_debugbar',
+            r'DEV_MODE',
         ]
 
         try:
@@ -204,12 +200,11 @@ class A04InsecureDesignScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A04:2021',
+                    owasp_category='A04',
                     check_name='Debug Mode Exposure',
-                    status='error',
+                    status='info',
                     severity='high',
                     description='Could not retrieve response to check for debug mode.',
-                    details='No response from target.',
                     duration_ms=duration_ms,
                 )
 
@@ -217,16 +212,16 @@ class A04InsecureDesignScanner(BaseScanner):
             for header_name in debug_header_names:
                 val = response.headers.get(header_name)
                 if val:
-                    found_debug.append(f"Header {header_name}: {val}")
+                    found_debug.append(f'Header {header_name}: {val}')
 
             body = response.text
             for pattern in debug_body_patterns:
                 if re.search(pattern, body, re.IGNORECASE):
-                    found_debug.append(f"Body pattern: {pattern}")
+                    found_debug.append(f'Body pattern: {pattern}')
 
             if found_debug:
                 return self.create_check(
-                    owasp_category='A04:2021',
+                    owasp_category='A04',
                     check_name='Debug Mode Exposure',
                     status='fail',
                     severity='high',
@@ -241,150 +236,96 @@ class A04InsecureDesignScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A04:2021',
+                owasp_category='A04',
                 check_name='Debug Mode Exposure',
                 status='pass',
                 severity='high',
                 description='No debug mode indicators found in response.',
-                details='No debug headers or debug framework content detected.',
-                remediation='Ensure DEBUG is disabled in all production deployments.',
                 duration_ms=duration_ms,
             )
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A04:2021',
+                owasp_category='A04',
                 check_name='Debug Mode Exposure',
-                status='error',
+                status='info',
                 severity='high',
                 description='Error during debug mode check.',
                 details=str(exc),
                 duration_ms=duration_ms,
             )
 
-    def check_default_credentials(self, url: str) -> dict:
-        """Detect login pages and note their presence as a default credentials risk."""
+    def check_default_error_pages(self, url: str) -> dict:
+        """Check if default framework error pages are shown."""
         start = time.time()
-        login_paths = ['/login', '/signin', '/admin/login', '/wp-login.php', '/user/login']
         base_url = self._get_base_url(url)
-        found_login_pages = []
-
-        login_form_patterns = [
-            r'<input[^>]+type=["\']password["\']',
-            r'<form[^>]+action=["\'][^"\']*login',
-            r'id=["\']login',
-            r'name=["\']login',
+        probe_url = urljoin(base_url, f'/wsc-probe-{uuid.uuid4().hex[:8]}')
+        framework_patterns = [
+            (r'Werkzeug.*Debugger', 'Werkzeug/Flask debug page'),
+            (r'Django.*debug.*page|Traceback.*Django', 'Django debug page'),
+            (r'Laravel.*Whoops|Whoops.*Laravel', 'Laravel debug page'),
+            (r'Whitelabel Error Page', 'Spring Whitelabel error page'),
+            (r'Application Error.*Rails|Rails.*error', 'Rails error page'),
+            (r'<title>Error.*Apache|Server at.*port', 'Apache default error page'),
+            (r'nginx.*error|<title>.*nginx', 'nginx default error page'),
         ]
 
         try:
-            for path in login_paths:
-                test_url = urljoin(base_url, path)
-                response = self.make_request(test_url, timeout=8)
-                if response is None or response.status_code not in (200, 301, 302):
-                    continue
-                body = response.text
-                for pattern in login_form_patterns:
-                    if re.search(pattern, body, re.IGNORECASE):
-                        found_login_pages.append(path)
-                        break
-
+            response = self.make_request(probe_url, timeout=10)
             duration_ms = int((time.time() - start) * 1000)
 
-            if found_login_pages:
+            if response is None:
                 return self.create_check(
-                    owasp_category='A04:2021',
-                    check_name='Default Credentials Risk',
-                    status='warning',
-                    severity='medium',
-                    description='Login page(s) detected — risk of default credential use.',
-                    details=f"Login forms found at: {', '.join(found_login_pages)}",
-                    remediation=(
-                        'Ensure default credentials are changed before deployment. '
-                        'Implement account lockout, CAPTCHA, and MFA on login pages. '
-                        'Audit for default admin accounts.'
-                    ),
-                    evidence=f"Login pages: {', '.join(found_login_pages)}",
+                    owasp_category='A04',
+                    check_name='Default Error Pages',
+                    status='info',
+                    severity='low',
+                    description='Could not retrieve error response to test default error pages.',
                     duration_ms=duration_ms,
                 )
 
+            body = response.text
+            for pattern, description in framework_patterns:
+                if re.search(pattern, body, re.IGNORECASE):
+                    return self.create_check(
+                        owasp_category='A04',
+                        check_name='Default Error Pages',
+                        status='fail',
+                        severity='low',
+                        description=f'Default framework error page detected: {description}.',
+                        details=f'Pattern matched: {pattern}',
+                        remediation=(
+                            'Configure custom error pages that do not reveal framework or technology information. '
+                            'Disable debug mode in production environments.'
+                        ),
+                        evidence=f'Framework error page: {description}',
+                        duration_ms=duration_ms,
+                    )
+
             return self.create_check(
-                owasp_category='A04:2021',
-                check_name='Default Credentials Risk',
-                status='info',
-                severity='medium',
-                description='No login pages found at common paths.',
-                details=f"Checked paths: {', '.join(login_paths)}",
-                remediation='Ensure any login interfaces require strong, non-default credentials.',
+                owasp_category='A04',
+                check_name='Default Error Pages',
+                status='pass',
+                severity='low',
+                description='No default framework error pages detected.',
+                details=f'HTTP {response.status_code} for non-existent path; no framework error signatures found.',
                 duration_ms=duration_ms,
             )
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A04:2021',
-                check_name='Default Credentials Risk',
-                status='error',
-                severity='medium',
-                description='Error during default credentials check.',
-                details=str(exc),
-                duration_ms=duration_ms,
-            )
-
-    def check_account_enumeration(self, url: str) -> dict:
-        """Probe /register and /forgot-password for account enumeration risks."""
-        start = time.time()
-        base_url = self._get_base_url(url)
-        enumeration_paths = ['/register', '/signup', '/forgot-password', '/reset-password', '/forgot']
-        found_endpoints = []
-
-        try:
-            for path in enumeration_paths:
-                test_url = urljoin(base_url, path)
-                response = self.make_request(test_url, timeout=8)
-                if response is not None and response.status_code == 200:
-                    body = response.text.lower()
-                    if any(kw in body for kw in ['email', 'username', 'password', 'register', 'forgot', 'reset']):
-                        found_endpoints.append(path)
-
-            duration_ms = int((time.time() - start) * 1000)
-
-            if found_endpoints:
-                return self.create_check(
-                    owasp_category='A04:2021',
-                    check_name='Account Enumeration',
-                    status='warning',
-                    severity='medium',
-                    description='Account-related endpoints found that may be vulnerable to enumeration.',
-                    details=f"Endpoints with account forms: {', '.join(found_endpoints)}",
-                    remediation=(
-                        'Ensure error messages on registration and password reset are generic '
-                        '(e.g. "If this email exists, you will receive a reset link"). '
-                        'Use identical response times and messages for valid and invalid accounts.'
-                    ),
-                    evidence=f"Accessible endpoints: {', '.join(found_endpoints)}",
-                    duration_ms=duration_ms,
-                )
-
-            return self.create_check(
-                owasp_category='A04:2021',
-                check_name='Account Enumeration',
+                owasp_category='A04',
+                check_name='Default Error Pages',
                 status='info',
-                severity='medium',
-                description='No obvious account enumeration endpoints found at common paths.',
-                details=f"Checked: {', '.join(enumeration_paths)}",
-                remediation='Ensure registration and password reset flows do not leak account existence.',
-                duration_ms=duration_ms,
-            )
-        except Exception as exc:
-            duration_ms = int((time.time() - start) * 1000)
-            return self.create_check(
-                owasp_category='A04:2021',
-                check_name='Account Enumeration',
-                status='error',
-                severity='medium',
-                description='Error during account enumeration check.',
+                severity='low',
+                description='Error during default error pages check.',
                 details=str(exc),
                 duration_ms=duration_ms,
             )
+
+    # ------------------------------------------------------------------
+    # run()
+    # ------------------------------------------------------------------
 
     def run(self, target_url: str, scan_id: int, db_session) -> list:
         checks = []
@@ -400,11 +341,8 @@ class A04InsecureDesignScanner(BaseScanner):
         self.log(scan_id, 'Checking debug mode exposure', 'info', 'a04_debug', db_session)
         checks.append(self.check_debug_mode(target_url))
 
-        self.log(scan_id, 'Checking default credentials risk', 'info', 'a04_creds', db_session)
-        checks.append(self.check_default_credentials(target_url))
-
-        self.log(scan_id, 'Checking account enumeration', 'info', 'a04_enum', db_session)
-        checks.append(self.check_account_enumeration(target_url))
+        self.log(scan_id, 'Checking default error pages', 'info', 'a04_error_pages', db_session)
+        checks.append(self.check_default_error_pages(target_url))
 
         self.log(scan_id, 'Completed A04 Insecure Design checks', 'info', 'a04_done', db_session)
         return checks

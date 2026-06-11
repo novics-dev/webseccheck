@@ -1,8 +1,17 @@
-import time
-import re
-from urllib.parse import urlparse, urlencode, parse_qs, urlunparse, urljoin
+"""
+A03 — Injection scanner.
 
-from .base import BaseScanner
+All checks are passive detection tests. Limited to 2-3 params from URL.
+No more than 5 requests per check.
+"""
+
+from __future__ import annotations
+
+import re
+import time
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+
+from app.services.scanner.base import BaseScanner
 
 
 class A03InjectionScanner(BaseScanner):
@@ -23,133 +32,146 @@ class A03InjectionScanner(BaseScanner):
             'and path traversal via parameters.'
         )
 
-    def _inject_param(self, url: str, payload: str) -> str:
-        """Return URL with payload injected into first existing param or a new 'test' param."""
+    def _inject_param(self, url: str, payload: str, max_params: int = 2) -> list[str]:
+        """Return list of URLs with payload injected into each of the first max_params params."""
         parsed = urlparse(url)
         params = parse_qs(parsed.query, keep_blank_values=True)
+        urls = []
 
         if params:
-            first_key = next(iter(params))
-            params[first_key] = [payload]
+            for key in list(params.keys())[:max_params]:
+                modified = dict(params)
+                modified[key] = [payload]
+                new_query = urlencode(modified, doseq=True)
+                urls.append(urlunparse(parsed._replace(query=new_query)))
         else:
-            params['test'] = [payload]
+            # No existing params — inject a new one
+            new_query = urlencode({'test': payload})
+            urls.append(urlunparse(parsed._replace(query=new_query)))
 
-        new_query = urlencode(params, doseq=True)
-        return urlunparse(parsed._replace(query=new_query))
+        return urls
+
+    # ------------------------------------------------------------------
+    # Checks
+    # ------------------------------------------------------------------
 
     def check_xss_reflection(self, url: str) -> dict:
-        """Inject a safe XSS probe and check if it is reflected unescaped."""
+        """Inject safe XSS probes and check if they are reflected unescaped."""
         start = time.time()
-        probe = '<script>alert(1)</script>'
+        probes = [
+            '<script>alert(1)</script>',
+            '"><img src=x onerror=alert(1)>',
+        ]
         try:
-            test_url = self._inject_param(url, probe)
-            response = self.make_request(test_url, timeout=10)
+            for probe in probes:
+                test_urls = self._inject_param(url, probe, max_params=2)
+                for test_url in test_urls[:3]:
+                    response = self.make_request(test_url, timeout=10)
+                    if response is None:
+                        continue
+                    body = response.text
+                    if probe in body:
+                        duration_ms = int((time.time() - start) * 1000)
+                        return self.create_check(
+                            owasp_category='A03',
+                            check_name='XSS Reflection',
+                            status='fail',
+                            severity='high',
+                            description='XSS probe reflected unescaped in response.',
+                            details=f"Probe '{probe[:50]}' found verbatim in response body.",
+                            remediation=(
+                                'Encode all user-supplied input before rendering in HTML. '
+                                'Implement a Content-Security-Policy. Use a templating engine with auto-escaping.'
+                            ),
+                            evidence=f'Unescaped reflection of: {probe[:50]}',
+                            duration_ms=duration_ms,
+                        )
+                    # Partial reflection
+                    if 'alert(1)' in body and '<script>' not in body:
+                        duration_ms = int((time.time() - start) * 1000)
+                        return self.create_check(
+                            owasp_category='A03',
+                            check_name='XSS Reflection',
+                            status='warning',
+                            severity='high',
+                            description='Partial XSS reflection: script tag filtered but inner content reflected.',
+                            details='alert(1) found in body without enclosing script tag.',
+                            remediation='Implement proper output encoding. Use context-aware escaping.',
+                            evidence='alert(1) reflected without script tags',
+                            duration_ms=duration_ms,
+                        )
+
             duration_ms = int((time.time() - start) * 1000)
-
-            if response is None:
-                return self.create_check(
-                    owasp_category='A03:2021',
-                    check_name='XSS Reflection',
-                    status='error',
-                    severity='high',
-                    description='Could not connect to target to test XSS reflection.',
-                    details='No response received.',
-                    duration_ms=duration_ms,
-                )
-
-            body = response.text
-            if probe in body:
-                return self.create_check(
-                    owasp_category='A03:2021',
-                    check_name='XSS Reflection',
-                    status='fail',
-                    severity='high',
-                    description='XSS probe reflected unescaped in response.',
-                    details=f"Probe '{probe}' found verbatim in response body.",
-                    remediation=(
-                        'Encode all user-supplied input before rendering in HTML. '
-                        'Implement a Content-Security-Policy. Use a templating engine with auto-escaping.'
-                    ),
-                    evidence=f"Unescaped reflection of: {probe}",
-                    duration_ms=duration_ms,
-                )
-
-            # Check for partial reflection (tag stripped but content present)
-            if 'alert(1)' in body and '<script>' not in body:
-                return self.create_check(
-                    owasp_category='A03:2021',
-                    check_name='XSS Reflection',
-                    status='warning',
-                    severity='high',
-                    description='Partial XSS reflection: script tag filtered but inner content reflected.',
-                    details='alert(1) found in body without enclosing script tag.',
-                    remediation=(
-                        'Implement proper output encoding. Avoid relying solely on tag stripping. '
-                        'Use context-aware escaping.'
-                    ),
-                    evidence='alert(1) reflected without script tags',
-                    duration_ms=duration_ms,
-                )
-
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='XSS Reflection',
                 status='pass',
                 severity='high',
-                description='XSS probe was not reflected unescaped in the response.',
-                details='Probe was absent or properly escaped in the response body.',
-                remediation='Continue using output encoding and Content-Security-Policy.',
+                description='XSS probes were not reflected unescaped in responses.',
                 duration_ms=duration_ms,
             )
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='XSS Reflection',
-                status='error',
+                status='info',
                 severity='high',
                 description='Error during XSS reflection check.',
                 details=str(exc),
                 duration_ms=duration_ms,
             )
 
-    def check_sql_injection(self, url: str) -> dict:
+    def check_sql_injection_errors(self, url: str) -> dict:
         """Inject SQL characters and check response for SQL error messages."""
         start = time.time()
-        sql_payloads = ["'", '"', "';--", "' OR '1'='1", "1; DROP TABLE users--"]
-        sql_errors = [
-            r'syntax error', r'mysql_fetch', r'ORA-\d{5}', r'sqlite.*error',
-            r'pg_query', r'Microsoft OLE DB Provider for SQL Server',
-            r'Unclosed quotation mark', r'mysql.*error', r'SQLSTATE',
-            r'Warning.*mysql_', r'valid MySQL result', r'MySqlException',
-            r'com\.mysql\.jdbc', r'org\.hibernate', r'SQL syntax.*MySQL',
-            r'supplied argument is not a valid MySQL', r'Column count doesn',
+        sql_payloads = ["'", '"', "1' OR '1'='1"]
+        sql_error_patterns = [
+            r'syntax error',
+            r'mysql_fetch',
+            r'ORA-\d{5}',
+            r'sqlite.*error',
+            r'pg_query',
+            r'Microsoft OLE DB Provider for SQL Server',
+            r'Unclosed quotation mark',
+            r'mysql.*error',
+            r'SQLSTATE',
+            r'Warning.*mysql_',
+            r'valid MySQL result',
+            r'MySqlException',
+            r'SQL syntax.*MySQL',
+            r'PostgreSQL.*ERROR',
+            r'Microsoft SQL',
         ]
         found_errors = []
 
         try:
             for payload in sql_payloads:
-                test_url = self._inject_param(url, payload)
-                response = self.make_request(test_url, timeout=10)
-                if response is None:
-                    continue
-                body = response.text
-                for error_pattern in sql_errors:
-                    if re.search(error_pattern, body, re.IGNORECASE):
-                        found_errors.append(
-                            f"Payload '{payload[:20]}' triggered pattern: {error_pattern}"
-                        )
-                        break
+                test_urls = self._inject_param(url, payload, max_params=2)
+                for test_url in test_urls[:2]:
+                    response = self.make_request(test_url, timeout=10)
+                    if response is None:
+                        continue
+                    body = response.text
+                    for pattern in sql_error_patterns:
+                        if re.search(pattern, body, re.IGNORECASE):
+                            found_errors.append(
+                                f"Payload '{payload}' triggered pattern: {pattern}"
+                            )
+                            break
+                # Stop after 5 total requests
+                if len(found_errors) >= 1 or (sql_payloads.index(payload) + 1) * 2 >= 5:
+                    break
 
             duration_ms = int((time.time() - start) * 1000)
 
             if found_errors:
                 return self.create_check(
-                    owasp_category='A03:2021',
+                    owasp_category='A03',
                     check_name='SQL Injection',
                     status='fail',
                     severity='critical',
-                    description='SQL error messages detected in response — possible SQL injection vulnerability.',
+                    description='SQL error messages detected — possible SQL injection vulnerability.',
                     details='; '.join(found_errors),
                     remediation=(
                         'Use parameterised queries or prepared statements. '
@@ -161,21 +183,20 @@ class A03InjectionScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='SQL Injection',
                 status='pass',
                 severity='critical',
                 description='No SQL error messages detected from injection payloads.',
-                details='Common SQL injection payloads did not trigger recognisable database error messages.',
-                remediation='Use parameterised queries and suppress error details in production.',
+                details='Common SQL injection payloads did not trigger database error messages.',
                 duration_ms=duration_ms,
             )
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='SQL Injection',
-                status='error',
+                status='info',
                 severity='critical',
                 description='Error during SQL injection check.',
                 details=str(exc),
@@ -187,54 +208,44 @@ class A03InjectionScanner(BaseScanner):
         start = time.time()
         probe = '<b>webseccheck_test</b>'
         try:
-            test_url = self._inject_param(url, probe)
-            response = self.make_request(test_url, timeout=10)
+            test_urls = self._inject_param(url, probe, max_params=2)
+            for test_url in test_urls[:2]:
+                response = self.make_request(test_url, timeout=10)
+                if response is None:
+                    continue
+                if probe in response.text:
+                    duration_ms = int((time.time() - start) * 1000)
+                    return self.create_check(
+                        owasp_category='A03',
+                        check_name='HTML Injection',
+                        status='fail',
+                        severity='medium',
+                        description='HTML injection probe reflected unescaped in response.',
+                        details=f"Probe '{probe}' found verbatim in response body.",
+                        remediation=(
+                            'Encode HTML special characters in all user-supplied output. '
+                            'Use a templating engine with automatic HTML escaping.'
+                        ),
+                        evidence=f'Reflected: {probe}',
+                        duration_ms=int((time.time() - start) * 1000),
+                    )
+
             duration_ms = int((time.time() - start) * 1000)
-
-            if response is None:
-                return self.create_check(
-                    owasp_category='A03:2021',
-                    check_name='HTML Injection',
-                    status='error',
-                    severity='medium',
-                    description='Could not connect to test HTML injection.',
-                    details='No response received.',
-                    duration_ms=duration_ms,
-                )
-
-            body = response.text
-            if probe in body:
-                return self.create_check(
-                    owasp_category='A03:2021',
-                    check_name='HTML Injection',
-                    status='fail',
-                    severity='medium',
-                    description='HTML injection probe reflected unescaped in response.',
-                    details=f"Probe '{probe}' found verbatim in response body.",
-                    remediation=(
-                        'Encode HTML special characters in all user-supplied output. '
-                        'Use a templating engine with automatic HTML escaping.'
-                    ),
-                    evidence=f"Reflected: {probe}",
-                    duration_ms=duration_ms,
-                )
-
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='HTML Injection',
                 status='pass',
                 severity='medium',
                 description='HTML injection probe was not reflected unescaped.',
                 details='HTML tags appear to be escaped or stripped from output.',
-                remediation='Continue encoding user-supplied HTML output.',
                 duration_ms=duration_ms,
             )
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='HTML Injection',
-                status='error',
+                status='info',
                 severity='medium',
                 description='Error during HTML injection check.',
                 details=str(exc),
@@ -246,56 +257,46 @@ class A03InjectionScanner(BaseScanner):
         start = time.time()
         crlf_payload = 'webseccheck%0d%0aX-Injected-Header%3a%20injected'
         try:
-            test_url = self._inject_param(url, crlf_payload)
-            response = self.make_request(test_url, allow_redirects=False, timeout=10)
+            test_urls = self._inject_param(url, crlf_payload, max_params=1)
+            for test_url in test_urls[:2]:
+                response = self.make_request(test_url, allow_redirects=False, timeout=10)
+                if response is None:
+                    continue
+                injected_in_headers = 'x-injected-header' in {k.lower() for k in response.headers.keys()}
+                injected_in_body = 'X-Injected-Header' in response.text
+                if injected_in_headers or injected_in_body:
+                    duration_ms = int((time.time() - start) * 1000)
+                    return self.create_check(
+                        owasp_category='A03',
+                        check_name='CRLF Injection',
+                        status='fail',
+                        severity='high',
+                        description='CRLF injection detected: injected header appeared in response.',
+                        details='X-Injected-Header was found in response headers or body.',
+                        remediation=(
+                            'Strip or encode CR (\\r) and LF (\\n) characters from all user inputs '
+                            'before using them in HTTP headers or responses.'
+                        ),
+                        evidence='X-Injected-Header found in response',
+                        duration_ms=duration_ms,
+                    )
+
             duration_ms = int((time.time() - start) * 1000)
-
-            if response is None:
-                return self.create_check(
-                    owasp_category='A03:2021',
-                    check_name='CRLF Injection',
-                    status='error',
-                    severity='medium',
-                    description='Could not connect to test CRLF injection.',
-                    details='No response received.',
-                    duration_ms=duration_ms,
-                )
-
-            injected = 'x-injected-header' in {k.lower() for k in response.headers.keys()}
-            body_injected = 'X-Injected-Header' in response.text
-
-            if injected or body_injected:
-                return self.create_check(
-                    owasp_category='A03:2021',
-                    check_name='CRLF Injection',
-                    status='fail',
-                    severity='high',
-                    description='CRLF injection detected: injected header appeared in response.',
-                    details='X-Injected-Header was found in response headers or body.',
-                    remediation=(
-                        'Strip or encode CR (\\r) and LF (\\n) characters from all user inputs '
-                        'before using them in HTTP headers or responses.'
-                    ),
-                    evidence='X-Injected-Header found in response',
-                    duration_ms=duration_ms,
-                )
-
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='CRLF Injection',
                 status='pass',
                 severity='high',
                 description='CRLF injection probe did not produce injected headers.',
                 details='No injected headers detected from CRLF payload.',
-                remediation='Sanitise CRLF characters from all user-supplied data used in HTTP responses.',
                 duration_ms=duration_ms,
             )
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='CRLF Injection',
-                status='error',
+                status='info',
                 severity='high',
                 description='Error during CRLF injection check.',
                 details=str(exc),
@@ -315,23 +316,24 @@ class A03InjectionScanner(BaseScanner):
 
         try:
             for payload in traversal_payloads:
-                test_url = self._inject_param(url, payload)
-                response = self.make_request(test_url, timeout=10)
-                if response is None:
-                    continue
-                body = response.text
-                for indicator in passwd_indicators:
-                    if indicator in body:
-                        found_evidence.append(
-                            f"Payload '{payload[:40]}' returned passwd-like content"
-                        )
-                        break
+                test_urls = self._inject_param(url, payload, max_params=2)
+                for test_url in test_urls[:2]:
+                    response = self.make_request(test_url, timeout=10)
+                    if response is None:
+                        continue
+                    body = response.text
+                    for indicator in passwd_indicators:
+                        if indicator in body:
+                            found_evidence.append(f"Payload '{payload[:40]}' returned passwd-like content")
+                            break
+                if found_evidence:
+                    break
 
             duration_ms = int((time.time() - start) * 1000)
 
             if found_evidence:
                 return self.create_check(
-                    owasp_category='A03:2021',
+                    owasp_category='A03',
                     check_name='Path Traversal via Parameters',
                     status='fail',
                     severity='critical',
@@ -346,26 +348,29 @@ class A03InjectionScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='Path Traversal via Parameters',
                 status='pass',
                 severity='critical',
                 description='No path traversal file content detected via URL parameters.',
                 details='Traversal payloads in URL parameters did not return /etc/passwd content.',
-                remediation='Validate and sanitise all path parameters; use canonical path checks.',
                 duration_ms=duration_ms,
             )
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A03:2021',
+                owasp_category='A03',
                 check_name='Path Traversal via Parameters',
-                status='error',
+                status='info',
                 severity='critical',
                 description='Error during path traversal parameter check.',
                 details=str(exc),
                 duration_ms=duration_ms,
             )
+
+    # ------------------------------------------------------------------
+    # run()
+    # ------------------------------------------------------------------
 
     def run(self, target_url: str, scan_id: int, db_session) -> list:
         checks = []
@@ -375,8 +380,8 @@ class A03InjectionScanner(BaseScanner):
         self.log(scan_id, 'Checking XSS reflection', 'info', 'a03_xss', db_session)
         checks.append(self.check_xss_reflection(target_url))
 
-        self.log(scan_id, 'Checking SQL injection', 'info', 'a03_sqli', db_session)
-        checks.append(self.check_sql_injection(target_url))
+        self.log(scan_id, 'Checking SQL injection errors', 'info', 'a03_sqli', db_session)
+        checks.append(self.check_sql_injection_errors(target_url))
 
         self.log(scan_id, 'Checking HTML injection', 'info', 'a03_html', db_session)
         checks.append(self.check_html_injection(target_url))

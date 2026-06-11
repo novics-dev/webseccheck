@@ -1,167 +1,144 @@
 {% extends "base.html" %}
-{% block title %}New Scan{% endblock %}
-
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-8">
-
-    <!-- Hero / Warning -->
-    <div class="alert alert-warning d-flex align-items-start mb-4 shadow-sm" role="alert">
-      <i class="bi bi-exclamation-triangle-fill fs-4 me-3 mt-1 flex-shrink-0"></i>
-      <div>
-        <h5 class="alert-heading mb-1">Authorized Testing Only</h5>
-        <p class="mb-0">Only test systems you own or have <strong>explicit written permission</strong> to test.
-        Unauthorized security testing is illegal and may result in criminal prosecution under the Computer Fraud and Abuse Act (CFAA) and similar laws worldwide.</p>
-      </div>
-    </div>
-
-    <!-- Permission Form -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-dark text-white">
-        <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Authorization &amp; Permission Declaration</h5>
-      </div>
-      <div class="card-body">
-        <p class="text-muted small mb-4">Before initiating a security scan, you must declare your authorization to test the target system. This record is stored with your scan results.</p>
-
-        <form method="POST" action="{{ url_for('main.save_permission') }}" novalidate>
-          {{ form.hidden_tag() }}
-
-          <div class="mb-3">
-            <label for="target_url" class="form-label fw-semibold">Target URL <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-globe"></i></span>
-              <input type="text" class="form-control" id="target_url" name="target_url"
-                     placeholder="https://example.com" required
-                     value="{{ request.form.get('target_url', '') }}">
-            </div>
-            <div class="form-text">Enter the full URL including protocol (https://). Subdomains and paths are allowed.</div>
-          </div>
-
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="full_name" class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="full_name" name="full_name"
-                     required placeholder="Jane Smith"
-                     value="{{ request.form.get('full_name', '') }}">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label for="organization" class="form-label fw-semibold">Organization <span class="text-muted fw-normal">(optional)</span></label>
-              <input type="text" class="form-control" id="organization" name="organization"
-                     placeholder="Acme Corp"
-                     value="{{ request.form.get('organization', '') }}">
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="email" class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-              <input type="email" class="form-control" id="email" name="email"
-                     required placeholder="jane@example.com"
-                     value="{{ request.form.get('email', '') }}">
-            </div>
-            <div class="form-text">A confirmation of this authorization will be sent to this address.</div>
-          </div>
-
-          <div class="mb-3">
-            <label for="scope_notes" class="form-label fw-semibold">Scope / Notes <span class="text-muted fw-normal">(optional)</span></label>
-            <textarea class="form-control" id="scope_notes" name="scope_notes" rows="3"
-                      placeholder="Describe what you're testing and why (e.g., 'Monthly security audit of our production web app per security policy SEC-2024-01')">{{ request.form.get('scope_notes', '') }}</textarea>
-          </div>
-
-          <div class="permission-consent-box mb-4">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="explicit_consent" name="explicit_consent" required>
-              <label class="form-check-label fw-semibold" for="explicit_consent">
-                I confirm that I am the owner of or have explicit written authorization to conduct security testing on the target URL above. I accept full legal responsibility for this test.
-              </label>
-            </div>
-          </div>
-
-          <div class="d-grid">
-            <button type="submit" class="btn btn-primary btn-lg">
-              <i class="bi bi-shield-lock me-2"></i>Save Permission &amp; Continue
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- OWASP Info Section -->
-    <div class="card shadow-sm">
-      <div class="card-header bg-secondary text-white">
-        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>What WebSecCheck Tests — OWASP Top 10 (2021)</h5>
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead class="table-dark">
-              <tr>
-                <th style="width:90px">ID</th>
-                <th>Category</th>
-                <th>What We Check</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><span class="badge bg-danger">A01</span></td>
-                <td><strong>Broken Access Control</strong></td>
-                <td>Directory traversal, unauthorized resource access, IDOR patterns, privilege escalation vectors</td>
-              </tr>
-              <tr>
-                <td><span class="badge bg-danger">A02</span></td>
-                <td><strong>Cryptographic Failures</strong></td>
-                <td>HTTPS enforcement, TLS version &amp; cipher strength, mixed content, sensitive data in URLs</td>
-              </tr>
-              <tr>
-                <td><span class="badge bg-danger">A03</span></td>
-                <td><strong>Injection</strong></td>
-                <td>SQL injection indicators, command injection vectors, LDAP/XPath injection patterns</td>
-              </tr>
-              <tr>
-                <td><span class="badge bg-warning text-dark">A04</span></td>
-                <td><strong>Insecure Design</strong></td>
-                <td>Missing rate limiting, lack of security controls, dangerous functionality exposure</td>
-              </tr>
-              <tr>
-                <td><span class="badge bg-warning text-dark">A05</span></td>
-                <td><strong>Security Misconfiguration</strong></td>
-                <td>Default credentials, verbose error messages, unnecessary HTTP methods, server banners</td>
-              </tr>
-              <tr>
-                <td><span class="badge bg-warning text-dark">A06</span></td>
-                <td><strong>Vulnerable Components</strong></td>
-                <td>Outdated server software, known vulnerable framework versions, exposed dependency info</td>
-              </tr>
-              <tr>
-                <td><span class="badge bg-info text-dark">A07</span></td>
-                <td><strong>Auth Failures</strong></td>
-                <td>Weak session management, missing MFA indicators, insecure credential transmission</td>
-              </tr>
-              <tr>
-                <td><span class="badge bg-info text-dark">A08</span></td>
-                <td><strong>Software &amp; Data Integrity</strong></td>
-                <td>Subresource integrity checks, insecure deserialization indicators, CI/CD exposure</td>
-              </tr>
-              <tr>
-                <td><span class="badge bg-secondary">A09</span></td>
-                <td><strong>Security Logging Failures</strong></td>
-                <td>Exposed log files, error verbosity, missing security headers that indicate logging</td>
-              </tr>
-              <tr>
-                <td><span class="badge bg-secondary">A10</span></td>
-                <td><strong>SSRF</strong></td>
-                <td>Server-side request forgery vectors, internal network exposure, URL redirect abuse</td>
-              </tr>
-            </tbody>
-          </table>
+    <div class="col-lg-8">
+        <!-- Warning banner -->
+        <div class="alert alert-warning border-warning" role="alert">
+            <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>Responsible Use Notice</h5>
+            <p class="mb-0">
+                This tool is intended <strong>exclusively for authorized security testing</strong>.
+                Scanning systems you do not own or have explicit written permission to test is
+                <strong>illegal and unethical</strong>. By submitting this form you confirm that
+                you are authorized to test the target.
+            </p>
         </div>
-      </div>
-      <div class="card-footer text-muted small">
-        WebSecCheck performs <strong>passive and semi-passive</strong> checks. No exploits are attempted. All checks are read-only where possible.
-      </div>
-    </div>
 
-  </div>
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0"><i class="bi bi-shield-check me-2"></i>New Security Scan</h4>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-4">
+                    Complete the form below to begin an OWASP Top 10 automated security assessment.
+                    A confirmation email will be sent to the address provided.
+                </p>
+
+                <form method="POST" action="{{ url_for('main.scan_permission') }}" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <!-- Target URL -->
+                    <div class="mb-3">
+                        <label for="target_url" class="form-label fw-semibold">
+                            Target URL <span class="text-danger">*</span>
+                        </label>
+                        {{ form.target_url(class="form-control" + (" is-invalid" if form.target_url.errors else ""),
+                           id="target_url", placeholder="https://example.com",
+                           autocomplete="off") }}
+                        {% for error in form.target_url.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Must be an external URL. Internal/localhost addresses are not permitted.</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <!-- Full Name -->
+                        <div class="col-md-6">
+                            <label for="requester_name" class="form-label fw-semibold">
+                                Full Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.requester_name(class="form-control" + (" is-invalid" if form.requester_name.errors else ""),
+                               id="requester_name", placeholder="Jane Smith") }}
+                            {% for error in form.requester_name.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Organization -->
+                        <div class="col-md-6">
+                            <label for="organization" class="form-label fw-semibold">
+                                Organization <span class="text-danger">*</span>
+                            </label>
+                            {{ form.organization(class="form-control" + (" is-invalid" if form.organization.errors else ""),
+                               id="organization", placeholder="Acme Corp") }}
+                            {% for error in form.organization.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label for="requester_email" class="form-label fw-semibold">
+                            Email Address <span class="text-danger">*</span>
+                        </label>
+                        {{ form.requester_email(class="form-control" + (" is-invalid" if form.requester_email.errors else ""),
+                           id="requester_email", placeholder="jane@example.com",
+                           type="email") }}
+                        {% for error in form.requester_email.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Report will be sent to this address.</div>
+                    </div>
+
+                    <!-- Scope description -->
+                    <div class="mb-4">
+                        <label for="scope_description" class="form-label fw-semibold">
+                            Scope Description <span class="text-muted fw-normal">(optional)</span>
+                        </label>
+                        {{ form.scope_description(class="form-control", id="scope_description",
+                           rows=3, placeholder="Describe the scope of the test, e.g. production web application...") }}
+                    </div>
+
+                    <!-- Consent -->
+                    <div class="mb-4 p-3 border rounded bg-light">
+                        <div class="form-check">
+                            {{ form.explicit_consent(class="form-check-input" + (" is-invalid" if form.explicit_consent.errors else ""),
+                               id="explicit_consent") }}
+                            <label class="form-check-label fw-semibold" for="explicit_consent">
+                                {{ form.explicit_consent.label.text }}
+                            </label>
+                            {% for error in form.explicit_consent.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-play-circle me-2"></i>Record Permission &amp; Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- OWASP categories info -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Checks Performed</h5>
+            </div>
+            <div class="card-body">
+                <div class="row row-cols-2 row-cols-md-3 g-2">
+                    {% for code, name in [
+                        ('A01','Broken Access Control'),
+                        ('A02','Cryptographic Failures'),
+                        ('A03','Injection'),
+                        ('A04','Insecure Design'),
+                        ('A05','Security Misconfiguration'),
+                        ('A06','Vulnerable Components'),
+                        ('A07','Auth Failures'),
+                        ('A08','Integrity Failures'),
+                        ('A09','Logging Failures'),
+                        ('A10','SSRF'),
+                    ] %}
+                    <div class="col">
+                        <span class="badge bg-secondary me-1">{{ code }}</span>
+                        <small>{{ name }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

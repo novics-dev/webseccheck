@@ -1,144 +1,284 @@
-"""
-A08 — Software and Data Integrity Failures scanner.
-"""
-
-from __future__ import annotations
-
-import re
 import time
+import re
+from urllib.parse import urlparse
 
-from app.services.scanner.base import BaseScanner
+from .base import BaseScanner
 
 
 class A08IntegrityScanner(BaseScanner):
-    category = "A08"
-    name = "Software and Data Integrity Failures"
-    description = (
-        "Checks Subresource Integrity on external scripts/styles, Content-Type mismatches, "
-        "and deserialization indicators."
-    )
+
+    @property
+    def category(self) -> str:
+        return 'A08'
+
+    @property
+    def name(self) -> str:
+        return 'Software and Data Integrity Failures'
+
+    @property
+    def description(self) -> str:
+        return (
+            'Checks for integrity failures including missing Subresource Integrity (SRI) '
+            'on external scripts and stylesheets, missing Content-Type charset, '
+            'and suspicious auto-update patterns in page source.'
+        )
+
+    def check_sri(self, url: str) -> dict:
+        """Check for external script/link tags missing integrity= attribute."""
+        start = time.time()
+        try:
+            response = self.make_request(url, timeout=10)
+            duration_ms = int((time.time() - start) * 1000)
+
+            if response is None:
+                return self.create_check(
+                    owasp_category='A08:2021',
+                    check_name='Subresource Integrity (SRI)',
+                    status='error',
+                    severity='medium',
+                    description='Could not retrieve page to check SRI.',
+                    details='No response from target.',
+                    duration_ms=duration_ms,
+                )
+
+            html = response.text
+            missing_sri = []
+
+            # External scripts without integrity attribute
+            script_tags = re.findall(
+                r'<script[^>]+src=["\']https?://[^"\']+["\'][^>]*>',
+                html, re.IGNORECASE
+            )
+            for tag in script_tags:
+                if 'integrity=' not in tag.lower():
+                    src_match = re.search(r'src=["\']([^"\']+)["\']', tag, re.IGNORECASE)
+                    src = src_match.group(1) if src_match else 'unknown'
+                    missing_sri.append(f"<script src=\"{src[:80]}\"> (no integrity)")
+
+            # External link/stylesheet tags without integrity attribute
+            link_tags = re.findall(
+                r'<link[^>]+href=["\']https?://[^"\']+["\'][^>]*>',
+                html, re.IGNORECASE
+            )
+            for tag in link_tags:
+                tag_lower = tag.lower()
+                if 'stylesheet' in tag_lower or 'preload' in tag_lower:
+                    if 'integrity=' not in tag_lower:
+                        href_match = re.search(r'href=["\']([^"\']+)["\']', tag, re.IGNORECASE)
+                        href = href_match.group(1) if href_match else 'unknown'
+                        missing_sri.append(f"<link href=\"{href[:80]}\"> (no integrity)")
+
+            if missing_sri:
+                return self.create_check(
+                    owasp_category='A08:2021',
+                    check_name='Subresource Integrity (SRI)',
+                    status='fail',
+                    severity='medium',
+                    description=f"{len(missing_sri)} external resource(s) loaded without SRI.",
+                    details='; '.join(missing_sri[:10]),
+                    remediation=(
+                        'Add integrity= and crossorigin= attributes to all external <script> and <link> tags. '
+                        'Generate SRI hashes at: https://www.srihash.org/'
+                    ),
+                    evidence='; '.join(missing_sri[:3]),
+                    duration_ms=duration_ms,
+                )
+
+            # Check if there are any external resources at all
+            if script_tags or link_tags:
+                return self.create_check(
+                    owasp_category='A08:2021',
+                    check_name='Subresource Integrity (SRI)',
+                    status='pass',
+                    severity='medium',
+                    description='All detected external resources have SRI integrity attributes.',
+                    details=f"Checked {len(script_tags)} script tag(s) and {len(link_tags)} link tag(s).",
+                    remediation='Continue using SRI for all externally hosted resources.',
+                    duration_ms=duration_ms,
+                )
+
+            return self.create_check(
+                owasp_category='A08:2021',
+                check_name='Subresource Integrity (SRI)',
+                status='info',
+                severity='medium',
+                description='No external script or stylesheet resources detected.',
+                details='Page does not appear to load scripts or stylesheets from external origins.',
+                remediation='If adding external resources in future, include SRI integrity hashes.',
+                duration_ms=duration_ms,
+            )
+        except Exception as exc:
+            duration_ms = int((time.time() - start) * 1000)
+            return self.create_check(
+                owasp_category='A08:2021',
+                check_name='Subresource Integrity (SRI)',
+                status='error',
+                severity='medium',
+                description='Error checking SRI.',
+                details=str(exc),
+                duration_ms=duration_ms,
+            )
+
+    def check_content_type(self, url: str) -> dict:
+        """Check Content-Type has charset and X-Content-Type-Options is set."""
+        start = time.time()
+        try:
+            response = self.make_request(url, timeout=10)
+            duration_ms = int((time.time() - start) * 1000)
+
+            if response is None:
+                return self.create_check(
+                    owasp_category='A08:2021',
+                    check_name='Content-Type Configuration',
+                    status='error',
+                    severity='low',
+                    description='Could not retrieve response to check Content-Type.',
+                    details='No response from target.',
+                    duration_ms=duration_ms,
+                )
+
+            content_type = response.headers.get('Content-Type', '')
+            xcto = response.headers.get('X-Content-Type-Options', '')
+            issues = []
+
+            if not content_type:
+                issues.append('Content-Type header is missing')
+            elif 'text/html' in content_type.lower() and 'charset' not in content_type.lower():
+                issues.append(f"Content-Type missing charset: {content_type}")
+
+            if not xcto:
+                issues.append('X-Content-Type-Options header is missing')
+            elif xcto.lower() != 'nosniff':
+                issues.append(f"X-Content-Type-Options should be 'nosniff', got: '{xcto}'")
+
+            if issues:
+                return self.create_check(
+                    owasp_category='A08:2021',
+                    check_name='Content-Type Configuration',
+                    status='fail',
+                    severity='low',
+                    description='Content-Type configuration issues detected.',
+                    details='; '.join(issues),
+                    remediation=(
+                        'Set Content-Type with charset (e.g. text/html; charset=utf-8). '
+                        'Add X-Content-Type-Options: nosniff to prevent MIME sniffing.'
+                    ),
+                    evidence='; '.join(issues),
+                    duration_ms=duration_ms,
+                )
+
+            return self.create_check(
+                owasp_category='A08:2021',
+                check_name='Content-Type Configuration',
+                status='pass',
+                severity='low',
+                description='Content-Type header includes charset and X-Content-Type-Options is set.',
+                details=f"Content-Type: {content_type}; X-Content-Type-Options: {xcto}",
+                remediation='Continue setting Content-Type with charset and X-Content-Type-Options: nosniff.',
+                duration_ms=duration_ms,
+            )
+        except Exception as exc:
+            duration_ms = int((time.time() - start) * 1000)
+            return self.create_check(
+                owasp_category='A08:2021',
+                check_name='Content-Type Configuration',
+                status='error',
+                severity='low',
+                description='Error checking Content-Type configuration.',
+                details=str(exc),
+                duration_ms=duration_ms,
+            )
+
+    def check_update_mechanisms(self, url: str) -> dict:
+        """Look for auto-update links or download patterns in HTML."""
+        start = time.time()
+        update_patterns = [
+            r'auto.?update',
+            r'auto.?upgrade',
+            r'download\.php\?.*(?:version|update|upgrade)',
+            r'update\.php',
+            r'upgrade\.php',
+            r'href=["\'][^"\']*download\.[^"\']*["\']',
+            r'window\.location.*update',
+            r'auto.?patch',
+        ]
+
+        try:
+            response = self.make_request(url, timeout=10)
+            duration_ms = int((time.time() - start) * 1000)
+
+            if response is None:
+                return self.create_check(
+                    owasp_category='A08:2021',
+                    check_name='Auto-Update Mechanisms',
+                    status='error',
+                    severity='low',
+                    description='Could not retrieve page to check for update mechanisms.',
+                    details='No response from target.',
+                    duration_ms=duration_ms,
+                )
+
+            html = response.text
+            found_patterns = []
+            for pattern in update_patterns:
+                matches = re.findall(pattern, html, re.IGNORECASE)
+                if matches:
+                    found_patterns.append(f"Pattern '{pattern}': {len(matches)} match(es)")
+
+            if found_patterns:
+                return self.create_check(
+                    owasp_category='A08:2021',
+                    check_name='Auto-Update Mechanisms',
+                    status='warning',
+                    severity='low',
+                    description='Potential auto-update or download mechanism patterns found in page.',
+                    details='; '.join(found_patterns),
+                    remediation=(
+                        'Ensure any update or download mechanisms verify the integrity of '
+                        'downloaded files using cryptographic signatures or hashes. '
+                        'Use HTTPS for all update endpoints.'
+                    ),
+                    evidence='; '.join(found_patterns[:3]),
+                    duration_ms=duration_ms,
+                )
+
+            return self.create_check(
+                owasp_category='A08:2021',
+                check_name='Auto-Update Mechanisms',
+                status='info',
+                severity='low',
+                description='No obvious auto-update or download mechanism patterns detected.',
+                details='Page source does not contain common auto-update URL patterns.',
+                remediation='Ensure any software update mechanisms verify file integrity.',
+                duration_ms=duration_ms,
+            )
+        except Exception as exc:
+            duration_ms = int((time.time() - start) * 1000)
+            return self.create_check(
+                owasp_category='A08:2021',
+                check_name='Auto-Update Mechanisms',
+                status='error',
+                severity='low',
+                description='Error checking for auto-update mechanisms.',
+                details=str(exc),
+                duration_ms=duration_ms,
+            )
 
     def run(self, target_url: str, scan_id: int, db_session) -> list:
         checks = []
-        self.log(scan_id, "Starting A08 Integrity Failures checks", "info", "A08", db_session)
-        checks.extend(self._check_sri(target_url, scan_id, db_session))
-        checks.extend(self._check_content_type_mismatch(target_url, scan_id, db_session))
-        checks.extend(self._check_deserialization_indicators(target_url, scan_id, db_session))
-        self.log(scan_id, f"A08 checks complete — {len(checks)} results", "info", "A08", db_session)
+
+        self.log(scan_id, 'Starting A08 Software/Data Integrity checks', 'info',
+                 'a08_start', db_session)
+
+        self.log(scan_id, 'Checking Subresource Integrity (SRI)', 'info', 'a08_sri', db_session)
+        checks.append(self.check_sri(target_url))
+
+        self.log(scan_id, 'Checking Content-Type configuration', 'info', 'a08_ctype', db_session)
+        checks.append(self.check_content_type(target_url))
+
+        self.log(scan_id, 'Checking auto-update mechanisms', 'info', 'a08_update', db_session)
+        checks.append(self.check_update_mechanisms(target_url))
+
+        self.log(scan_id, 'Completed A08 Software/Data Integrity checks', 'info',
+                 'a08_done', db_session)
         return checks
-
-    def _check_sri(self, target_url, scan_id, db_session):
-        self.log(scan_id, "Checking Subresource Integrity (SRI)", "info", "A08:sri", db_session)
-        start = time.time()
-        resp = self.make_request(target_url)
-        duration_ms = int((time.time() - start) * 1000)
-        if not resp:
-            return []
-
-        # Find external scripts and stylesheets
-        external_scripts = re.findall(
-            r'<script[^>]+src=["\']https?://(?!(?:' + re.escape(re.sub(r'https?://', '', target_url).split('/')[0]) + r'))[^"\']+["\'][^>]*>',
-            resp.text, re.IGNORECASE
-        )
-        external_styles = re.findall(
-            r'<link[^>]+href=["\']https?://(?!(?:' + re.escape(re.sub(r'https?://', '', target_url).split('/')[0]) + r'))[^"\']+["\'][^>]*>',
-            resp.text, re.IGNORECASE
-        )
-
-        missing_sri = []
-        for tag in external_scripts + external_styles:
-            if 'integrity=' not in tag.lower():
-                # Extract src/href for evidence
-                src = re.search(r'(?:src|href)=["\']([^"\']+)["\']', tag, re.IGNORECASE)
-                if src:
-                    missing_sri.append(src.group(1))
-
-        if missing_sri:
-            return [self.create_check(
-                "A08", "Subresource Integrity (SRI)", "warning", "medium",
-                f"{len(missing_sri)} external resources loaded without SRI integrity attribute.",
-                details={"missing_sri": missing_sri[:10]},
-                remediation=(
-                    "Add integrity and crossorigin attributes to external scripts/styles:\n"
-                    '<script src="..." integrity="sha384-..." crossorigin="anonymous">'
-                ),
-                evidence=str(missing_sri[:3]),
-                duration_ms=duration_ms,
-            )]
-        return [self.create_check(
-            "A08", "Subresource Integrity (SRI)", "pass", "info",
-            "All detected external resources use SRI integrity attributes (or no external resources).",
-            duration_ms=duration_ms,
-        )]
-
-    def _check_content_type_mismatch(self, target_url, scan_id, db_session):
-        self.log(scan_id, "Checking Content-Type consistency", "info", "A08:ctype", db_session)
-        start = time.time()
-        resp = self.make_request(target_url)
-        duration_ms = int((time.time() - start) * 1000)
-        if not resp:
-            return []
-
-        content_type = resp.headers.get("Content-Type", "")
-        x_ct_options = resp.headers.get("X-Content-Type-Options", "")
-
-        issues = []
-        if not content_type:
-            issues.append("Missing Content-Type header")
-        if x_ct_options.lower() != "nosniff":
-            issues.append(f"X-Content-Type-Options is '{x_ct_options}' — should be 'nosniff'")
-
-        if issues:
-            return [self.create_check(
-                "A08", "Content-Type Mismatch", "warning", "medium",
-                f"Content-Type issues: {issues}",
-                details={"issues": issues, "content_type": content_type},
-                remediation="Always set Content-Type headers and X-Content-Type-Options: nosniff.",
-                duration_ms=duration_ms,
-            )]
-        return [self.create_check(
-            "A08", "Content-Type Mismatch", "pass", "info",
-            f"Content-Type ({content_type}) and X-Content-Type-Options correctly set.",
-            duration_ms=duration_ms,
-        )]
-
-    def _check_deserialization_indicators(self, target_url, scan_id, db_session):
-        self.log(scan_id, "Checking deserialization indicators", "info", "A08:deser", db_session)
-        start = time.time()
-        resp = self.make_request(target_url)
-        duration_ms = int((time.time() - start) * 1000)
-        if not resp:
-            return []
-
-        # Look for serialized data patterns in cookies or visible params
-        deser_patterns = [
-            r'O:\d+:"[A-Za-z]',          # PHP object serialization
-            r'rO0AB',                     # Java serialized base64 prefix
-            r'Tzo\d+:',                   # PHP object
-            r'YTox:',                     # PHP array
-        ]
-
-        indicators = []
-        # Check cookies
-        for cookie in resp.cookies:
-            for pattern in deser_patterns:
-                if re.search(pattern, cookie.value):
-                    indicators.append(f"Cookie '{cookie.name}' contains serialized data pattern")
-
-        if indicators:
-            return [self.create_check(
-                "A08", "Deserialization Indicators", "warning", "high",
-                f"Potential unsafe deserialization: {indicators}",
-                details={"indicators": indicators},
-                remediation=(
-                    "Avoid deserializing user-controlled data. Use signing/integrity checks. "
-                    "Prefer JSON over binary serialization formats."
-                ),
-                evidence=str(indicators),
-                duration_ms=duration_ms,
-            )]
-        return [self.create_check(
-            "A08", "Deserialization Indicators", "pass", "info",
-            "No unsafe deserialization patterns detected.",
-            duration_ms=duration_ms,
-        )]

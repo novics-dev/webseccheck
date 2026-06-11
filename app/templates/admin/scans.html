@@ -1,0 +1,97 @@
+{% extends "admin/base.html" %}
+{% block title %}All Scans{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-list-check me-2"></i>All Scans</h2>
+</div>
+
+<!-- Filters -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="GET" class="row g-2 align-items-end">
+      <div class="col-auto">
+        <label class="form-label small">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for s in ['pending','running','completed','failed'] %}
+          <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>{{ s|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
+        <a href="{{ url_for('admin.scans') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    {% if scans.items %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th><th>Target URL</th><th>Requester</th><th>Status</th>
+            <th>Risk</th><th>Pass/Fail/Warn</th><th>Date</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scan in scans.items %}
+          <tr>
+            <td><code class="small">{{ scan.id[:8] }}</code></td>
+            <td class="text-truncate" style="max-width:180px">{{ scan.permission.target_url }}</td>
+            <td class="small">{{ scan.permission.requester_email }}</td>
+            <td><span class="badge status-{{ scan.status }}">{{ scan.status }}</span></td>
+            <td>
+              {% if scan.risk_score is not none %}
+              <span class="fw-bold {% if scan.risk_score >= 80 %}text-danger{% elif scan.risk_score >= 60 %}text-warning{% else %}text-success{% endif %}">
+                {{ scan.risk_score }}
+              </span>
+              {% else %}—{% endif %}
+            </td>
+            <td class="small">
+              <span class="text-success">{{ scan.passed_checks or 0 }}</span> /
+              <span class="text-danger">{{ scan.failed_checks or 0 }}</span> /
+              <span class="text-warning">{{ scan.warning_checks or 0 }}</span>
+            </td>
+            <td class="small text-muted">{{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+              <a href="{{ url_for('admin.scan_detail', scan_id=scan.id) }}" class="btn btn-outline-primary btn-sm me-1">View</a>
+              <form method="POST" action="{{ url_for('admin.scan_delete', scan_id=scan.id) }}" class="d-inline"
+                    onsubmit="return confirm('Delete this scan and all its data?')">
+                {{ csrf_token() }}
+                <button type="submit" class="btn btn-outline-danger btn-sm">Del</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- Pagination -->
+    {% if scans.pages > 1 %}
+    <div class="d-flex justify-content-center py-3">
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% for p in scans.iter_pages() %}
+            {% if p %}
+            <li class="page-item {% if p == scans.page %}active{% endif %}">
+              <a class="page-link" href="?page={{ p }}{% if request.args.get('status') %}&status={{ request.args.get('status') }}{% endif %}">{{ p }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-1 d-block mb-2"></i>No scans found.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

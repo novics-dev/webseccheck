@@ -1,0 +1,74 @@
+{% extends "admin/base.html" %}
+{% block title %}System Logs{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-journal-text me-2"></i>System Logs</h2>
+</div>
+
+<!-- Filters -->
+<div class="card shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="GET" class="row g-2 align-items-end">
+      <div class="col-auto">
+        <label class="form-label small mb-1">Scan ID</label>
+        <input name="scan_id" class="form-control form-control-sm" placeholder="Scan ID prefix" value="{{ request.args.get('scan_id','') }}">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">Level</label>
+        <select name="level" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for lvl in ['info','warning','error','debug'] %}
+          <option value="{{ lvl }}" {% if request.args.get('level') == lvl %}selected{% endif %}>{{ lvl|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
+        <a href="{{ url_for('admin.logs') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="log-feed" style="height:500px; overflow-y:auto" id="log-feed">
+      {% for log in logs %}
+      <div class="log-{{ log.level }}">
+        [{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}]
+        [{{ log.level|upper }}]
+        [{{ log.scan_id[:8] if log.scan_id else 'system' }}]
+        {% if log.step %}[{{ log.step }}]{% endif %}
+        {{ log.message }}
+      </div>
+      {% else %}
+      <div class="text-muted p-3">No logs found.</div>
+      {% endfor %}
+    </div>
+    {% if logs_pagination and logs_pagination.pages > 1 %}
+    <div class="d-flex justify-content-center py-2 border-top">
+      <nav><ul class="pagination pagination-sm mb-0">
+        {% for pg in logs_pagination.iter_pages() %}
+          {% if pg %}
+          <li class="page-item {% if pg == logs_pagination.page %}active{% endif %}">
+            <a class="page-link" href="?page={{ pg }}{% if request.args.get('scan_id') %}&scan_id={{ request.args.get('scan_id') }}{% endif %}{% if request.args.get('level') %}&level={{ request.args.get('level') }}{% endif %}">{{ pg }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endfor %}
+      </ul></nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto-scroll to bottom of log feed
+  const feed = document.getElementById('log-feed');
+  if (feed) feed.scrollTop = feed.scrollHeight;
+</script>
+{% endblock %}
