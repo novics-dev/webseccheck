@@ -49,7 +49,7 @@ class A10SSRFScanner(BaseScanner):
 
             if found_params:
                 return self.create_check(
-                    owasp_category='A10:2021',
+                    owasp_category='A10',
                     check_name='SSRF-Susceptible URL Parameters',
                     status='warning',
                     severity='high',
@@ -65,7 +65,7 @@ class A10SSRFScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A10:2021',
+                owasp_category='A10',
                 check_name='SSRF-Susceptible URL Parameters',
                 status='info',
                 severity='high',
@@ -77,9 +77,9 @@ class A10SSRFScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A10:2021',
+                owasp_category='A10',
                 check_name='SSRF-Susceptible URL Parameters',
-                status='error',
+                status='warning',
                 severity='high',
                 description='Error checking URL parameters for SSRF.',
                 details=str(exc),
@@ -119,7 +119,7 @@ class A10SSRFScanner(BaseScanner):
 
             if found_redirects:
                 return self.create_check(
-                    owasp_category='A10:2021',
+                    owasp_category='A10',
                     check_name='Open Redirect',
                     status='fail',
                     severity='medium',
@@ -135,7 +135,7 @@ class A10SSRFScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A10:2021',
+                owasp_category='A10',
                 check_name='Open Redirect',
                 status='pass',
                 severity='medium',
@@ -147,9 +147,9 @@ class A10SSRFScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A10:2021',
+                owasp_category='A10',
                 check_name='Open Redirect',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error during open redirect check.',
                 details=str(exc),
@@ -181,7 +181,7 @@ class A10SSRFScanner(BaseScanner):
 
             if found_webhook_params:
                 return self.create_check(
-                    owasp_category='A10:2021',
+                    owasp_category='A10',
                     check_name='Webhook/Callback Parameters',
                     status='warning',
                     severity='high',
@@ -197,7 +197,7 @@ class A10SSRFScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A10:2021',
+                owasp_category='A10',
                 check_name='Webhook/Callback Parameters',
                 status='info',
                 severity='high',
@@ -209,9 +209,9 @@ class A10SSRFScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A10:2021',
+                owasp_category='A10',
                 check_name='Webhook/Callback Parameters',
-                status='error',
+                status='warning',
                 severity='high',
                 description='Error checking for webhook parameters.',
                 details=str(exc),
@@ -237,9 +237,9 @@ class A10SSRFScanner(BaseScanner):
 
             if response is None:
                 return self.create_check(
-                    owasp_category='A10:2021',
+                    owasp_category='A10',
                     check_name='URL Import Functionality',
-                    status='error',
+                    status='warning',
                     severity='medium',
                     description='Could not retrieve page to check for URL import inputs.',
                     details='No response from target.',
@@ -255,7 +255,7 @@ class A10SSRFScanner(BaseScanner):
 
             if found_inputs:
                 return self.create_check(
-                    owasp_category='A10:2021',
+                    owasp_category='A10',
                     check_name='URL Import Functionality',
                     status='warning',
                     severity='medium',
@@ -272,7 +272,7 @@ class A10SSRFScanner(BaseScanner):
                 )
 
             return self.create_check(
-                owasp_category='A10:2021',
+                owasp_category='A10',
                 check_name='URL Import Functionality',
                 status='info',
                 severity='medium',
@@ -284,9 +284,9 @@ class A10SSRFScanner(BaseScanner):
         except Exception as exc:
             duration_ms = int((time.time() - start) * 1000)
             return self.create_check(
-                owasp_category='A10:2021',
+                owasp_category='A10',
                 check_name='URL Import Functionality',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error checking for URL import functionality.',
                 details=str(exc),

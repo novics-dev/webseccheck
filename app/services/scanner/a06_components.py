@@ -62,7 +62,7 @@ class A06ComponentsScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A06',
                     check_name='JavaScript Library Versions',
-                    status='error',
+                    status='warning',
                     severity='medium',
                     description='Could not retrieve page to check JS libraries.',
                     details='No response from target.',
@@ -130,7 +130,7 @@ class A06ComponentsScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A06',
                 check_name='JavaScript Library Versions',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error checking JavaScript libraries.',
                 details=str(exc),
@@ -170,7 +170,7 @@ class A06ComponentsScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A06',
                     check_name='CMS Detection',
-                    status='error',
+                    status='warning',
                     severity='low',
                     description='Could not retrieve page for CMS detection.',
                     details='No response from target.',
@@ -218,7 +218,7 @@ class A06ComponentsScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A06',
                 check_name='CMS Detection',
-                status='error',
+                status='warning',
                 severity='low',
                 description='Error during CMS detection.',
                 details=str(exc),
@@ -242,7 +242,7 @@ class A06ComponentsScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A06',
                     check_name='Framework Version Disclosure',
-                    status='error',
+                    status='warning',
                     severity='medium',
                     description='Could not retrieve response to check framework versions.',
                     details='No response from target.',
@@ -286,7 +286,7 @@ class A06ComponentsScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A06',
                 check_name='Framework Version Disclosure',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error checking framework version disclosure.',
                 details=str(exc),
@@ -306,7 +306,7 @@ class A06ComponentsScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A06',
                     check_name='Web Server Version Disclosure',
-                    status='error',
+                    status='warning',
                     severity='low',
                     description='Could not retrieve response to check server version.',
                     details='No response from target.',
@@ -350,7 +350,7 @@ class A06ComponentsScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A06',
                 check_name='Web Server Version Disclosure',
-                status='error',
+                status='warning',
                 severity='low',
                 description='Error checking web server version disclosure.',
                 details=str(exc),
