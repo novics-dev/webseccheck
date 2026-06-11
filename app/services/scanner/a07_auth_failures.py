@@ -142,7 +142,7 @@ class A07AuthFailuresScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A07',
                 check_name='Brute Force Protection',
-                status='error',
+                status='warning',
                 severity='high',
                 description='Error during brute force protection check.',
                 details=str(exc),
@@ -191,7 +191,7 @@ class A07AuthFailuresScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A07',
                 check_name='Password in URL',
-                status='error',
+                status='warning',
                 severity='high',
                 description='Error checking for password in URL.',
                 details=str(exc),
@@ -211,7 +211,7 @@ class A07AuthFailuresScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A07',
                     check_name='Session Cookie Security',
-                    status='error',
+                    status='warning',
                     severity='high',
                     description='Could not retrieve response to check session cookies.',
                     details='No response from target.',
@@ -292,7 +292,7 @@ class A07AuthFailuresScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A07',
                 check_name='Session Cookie Security',
-                status='error',
+                status='warning',
                 severity='high',
                 description='Error checking session cookie security.',
                 details=str(exc),
@@ -374,7 +374,7 @@ class A07AuthFailuresScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A07',
                 check_name='Multi-Factor Authentication',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error checking for MFA presence.',
                 details=str(exc),
@@ -431,7 +431,7 @@ class A07AuthFailuresScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A07',
                 check_name='Password Reset Mechanism',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error checking password reset mechanism.',
                 details=str(exc),

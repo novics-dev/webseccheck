@@ -66,7 +66,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A05',
                     check_name='Security Headers',
-                    status='error',
+                    status='warning',
                     severity='high',
                     description='Could not retrieve response to check security headers.',
                     details='No response from target.',
@@ -134,7 +134,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A05',
                 check_name='Security Headers',
-                status='error',
+                status='warning',
                 severity='high',
                 description='Error checking security headers.',
                 details=str(exc),
@@ -156,7 +156,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A05',
                     check_name='Server Version Disclosure',
-                    status='error',
+                    status='warning',
                     severity='low',
                     description='Could not retrieve response to check server disclosure.',
                     details='No response from target.',
@@ -215,7 +215,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A05',
                 check_name='Server Version Disclosure',
-                status='error',
+                status='warning',
                 severity='low',
                 description='Error checking server disclosure.',
                 details=str(exc),
@@ -294,7 +294,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A05',
                 check_name='Default/Sensitive Files Exposed',
-                status='error',
+                status='warning',
                 severity='high',
                 description='Error checking for default/sensitive files.',
                 details=str(exc),
@@ -312,7 +312,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A05',
                     check_name='HTTP TRACE Method',
-                    status='error',
+                    status='warning',
                     severity='low',
                     description='Could not connect to check TRACE method.',
                     details='No response from target.',
@@ -351,7 +351,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A05',
                 check_name='HTTP TRACE Method',
-                status='error',
+                status='warning',
                 severity='low',
                 description='Error checking HTTP TRACE method.',
                 details=str(exc),
@@ -377,7 +377,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A05',
                     check_name='Directory Listing',
-                    status='error',
+                    status='warning',
                     severity='medium',
                     description='Could not retrieve response to check directory listing.',
                     details='No response from target.',
@@ -417,7 +417,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A05',
                 check_name='Directory Listing',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error checking for directory listing.',
                 details=str(exc),
@@ -441,7 +441,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A05',
                     check_name='CORS Policy',
-                    status='error',
+                    status='warning',
                     severity='high',
                     description='Could not retrieve response to check CORS.',
                     details='No response from target.',
@@ -501,7 +501,7 @@ class A05SecurityMisconfigScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A05',
                 check_name='CORS Policy',
-                status='error',
+                status='warning',
                 severity='high',
                 description='Error checking CORS policy.',
                 details=str(exc),

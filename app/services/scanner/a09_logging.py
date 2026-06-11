@@ -58,7 +58,7 @@ class A09LoggingScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A09',
                     check_name='Error Information Disclosure',
-                    status='error',
+                    status='warning',
                     severity='medium',
                     description='Could not retrieve error page for analysis.',
                     details='No response from target.',
@@ -108,7 +108,7 @@ class A09LoggingScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A09',
                 check_name='Error Information Disclosure',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error during error disclosure check.',
                 details=str(exc),
@@ -188,7 +188,7 @@ class A09LoggingScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A09',
                 check_name='Log File Exposure',
-                status='error',
+                status='warning',
                 severity='high',
                 description='Error checking for log file exposure.',
                 details=str(exc),
@@ -276,7 +276,7 @@ class A09LoggingScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A09',
                 check_name='Stack Trace Leakage',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error during stack trace leakage check.',
                 details=str(exc),

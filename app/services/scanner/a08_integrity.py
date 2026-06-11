@@ -34,7 +34,7 @@ class A08IntegrityScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A08',
                     check_name='Subresource Integrity (SRI)',
-                    status='error',
+                    status='warning',
                     severity='medium',
                     description='Could not retrieve page to check SRI.',
                     details='No response from target.',
@@ -112,7 +112,7 @@ class A08IntegrityScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A08',
                 check_name='Subresource Integrity (SRI)',
-                status='error',
+                status='warning',
                 severity='medium',
                 description='Error checking SRI.',
                 details=str(exc),
@@ -130,7 +130,7 @@ class A08IntegrityScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A08',
                     check_name='Content-Type Configuration',
-                    status='error',
+                    status='warning',
                     severity='low',
                     description='Could not retrieve response to check Content-Type.',
                     details='No response from target.',
@@ -182,7 +182,7 @@ class A08IntegrityScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A08',
                 check_name='Content-Type Configuration',
-                status='error',
+                status='warning',
                 severity='low',
                 description='Error checking Content-Type configuration.',
                 details=str(exc),
@@ -211,7 +211,7 @@ class A08IntegrityScanner(BaseScanner):
                 return self.create_check(
                     owasp_category='A08',
                     check_name='Auto-Update Mechanisms',
-                    status='error',
+                    status='warning',
                     severity='low',
                     description='Could not retrieve page to check for update mechanisms.',
                     details='No response from target.',
@@ -257,7 +257,7 @@ class A08IntegrityScanner(BaseScanner):
             return self.create_check(
                 owasp_category='A08',
                 check_name='Auto-Update Mechanisms',
-                status='error',
+                status='warning',
                 severity='low',
                 description='Error checking for auto-update mechanisms.',
                 details=str(exc),
