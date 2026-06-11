@@ -22,7 +22,7 @@
             <td>{{ p.requester_name }}</td>
             <td class="small">{{ p.requester_email }}</td>
             <td class="small">{{ p.organization or '—' }}</td>
-            <td class="small text-muted">{{ p.consent_timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="small text-muted">{{ p.consent_timestamp.strftime('%Y-%m-%d %H:%M') if p.consent_timestamp else '—' }}</td>
             <td><code class="small">{{ p.ip_address }}</code></td>
             <td>{{ p.scans | length }}</td>
           </tr>
