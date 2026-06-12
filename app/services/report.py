@@ -156,6 +156,276 @@ def generate_html_summary(scan_id: int) -> str:
 </html>"""
 
 
+def _management_samenvatting(
+    target: str,
+    risk: float,
+    failed_checks: list,
+    warning_checks: list,
+    all_checks: list,
+    scan,
+) -> list:
+    """
+    Bouw de Nederlandstalige managementsamenvatting als een lijst van ReportLab-elementen.
+    Analyseert bevindingen dynamisch en schrijft in begrijpelijke taal voor management.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.lib import colors
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.enums import TA_LEFT
+
+    styles = getSampleStyleSheet()
+    style_h1 = ParagraphStyle("mh1", parent=styles["Heading1"], fontSize=16, spaceAfter=8)
+    style_h2 = ParagraphStyle("mh2", parent=styles["Heading2"], fontSize=12, spaceAfter=6, spaceBefore=12)
+    style_normal = ParagraphStyle("mn", parent=styles["Normal"], fontSize=10, spaceAfter=6, leading=15)
+    style_bullet = ParagraphStyle("mbullet", parent=styles["Normal"], fontSize=10, spaceAfter=4,
+                                  leading=14, leftIndent=15, bulletIndent=5)
+    style_small = ParagraphStyle("msmall", parent=styles["Normal"], fontSize=8)
+    style_bold = ParagraphStyle("mbold", parent=styles["Normal"], fontSize=10, fontName="Helvetica-Bold")
+
+    story = []
+
+    # Titel
+    story.append(Paragraph("Managementsamenvatting", style_h1))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#2c3e6b")))
+    story.append(Spacer(1, 0.4 * cm))
+
+    # ---- Risicooordeel ------------------------------------------------
+    scan_date = scan.completed_at.strftime("%-d %B %Y") if scan.completed_at else "onbekend"
+    if risk >= 70:
+        oordeel = "HOOG RISICO"
+        oordeel_kleur = colors.HexColor("#dc3545")
+        oordeel_tekst = (
+            "De beveiligingssituatie van deze website is op dit moment zorgwekkend. "
+            "Er zijn ernstige kwetsbaarheden gevonden die direct aangepakt moeten worden. "
+            "Wacht hier niet mee: kwaadwillenden kunnen deze zwakke plekken misbruiken "
+            "om gegevens te stelen, klanten te misleiden of de dienstverlening te verstoren."
+        )
+    elif risk >= 40:
+        oordeel = "GEMIDDELD RISICO"
+        oordeel_kleur = colors.HexColor("#fd7e14")
+        oordeel_tekst = (
+            "De website heeft een aantal beveiligingsproblemen die serieuze aandacht verdienen. "
+            "Er is geen directe ramp op komst, maar als deze punten niet worden opgepakt "
+            "groeit het risico op een beveiligingsincident. Aanpak binnen de komende weken "
+            "is sterk aanbevolen."
+        )
+    else:
+        oordeel = "LAAG RISICO"
+        oordeel_kleur = colors.HexColor("#198754")
+        oordeel_tekst = (
+            "De basisbeveiliging van deze website is redelijk op orde. "
+            "Er zijn enkele verbeterpunten gevonden, maar er zijn geen kritieke of hoge "
+            "risico's vastgesteld. De aanbevelingen in dit rapport helpen de website "
+            "verder te versterken."
+        )
+
+    oordeel_data = [[
+        Paragraph(f"<b>Risico-oordeel: {oordeel}</b>", ParagraphStyle(
+            "oo", parent=styles["Normal"], fontSize=14, textColor=colors.white, fontName="Helvetica-Bold"
+        )),
+        Paragraph(f"<b>Risicoscore: {risk:.0f} / 100</b>", ParagraphStyle(
+            "os", parent=styles["Normal"], fontSize=14, textColor=colors.white, fontName="Helvetica-Bold",
+            alignment=2,
+        )),
+    ]]
+    oordeel_table = Table(oordeel_data, colWidths=[10 * cm, 6 * cm])
+    oordeel_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), oordeel_kleur),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    story.append(oordeel_table)
+    story.append(Spacer(1, 0.4 * cm))
+    story.append(Paragraph(oordeel_tekst, style_normal))
+
+    # ---- Wat is er onderzocht? -----------------------------------------
+    story.append(Paragraph("Wat is er onderzocht?", style_h2))
+    story.append(Paragraph(
+        f"Op <b>{scan_date}</b> is een geautomatiseerde beveiligingsscan uitgevoerd op "
+        f"<b>{target}</b>. Daarbij zijn in totaal <b>{len(all_checks)} beveiligingscontroles</b> "
+        f"uitgevoerd, verdeeld over de tien meest voorkomende categorieën van internetbeveiligingsrisico's "
+        f"(de internationale OWASP Top 10) én een reeks specifieke privacycontroles op grond van de AVG/GDPR. "
+        f"Denk hierbij aan zaken als: hoe goed de website beschermd is tegen hackers die proberen in te breken, "
+        f"hoe veilig de verbinding met de website is, of persoonsgegevens goed worden beschermd, "
+        f"en of de website voldoet aan privacywetgeving.",
+        style_normal
+    ))
+
+    # ---- Uitkomsten in één oogopslag -----------------------------------
+    story.append(Paragraph("Uitkomsten in één oogopslag", style_h2))
+
+    n_critical = sum(1 for c in failed_checks if c.severity == "critical")
+    n_high = sum(1 for c in failed_checks if c.severity == "high")
+    n_medium = sum(1 for c in failed_checks + warning_checks if c.severity == "medium")
+    n_low = sum(1 for c in failed_checks + warning_checks if c.severity == "low")
+    n_pass = sum(1 for c in all_checks if c.status == "pass")
+
+    overzicht_data = [
+        ["Resultaat", "Aantal", "Wat betekent dit?"],
+        ["🔴  Kritiek / Hoog", f"{n_critical + n_high}",
+         "Direct gevaar. Aanpak zo snel mogelijk vereist."],
+        ["🟠  Gemiddeld", f"{n_medium}",
+         "Verhoogd risico. Aanpak binnen enkele weken gewenst."],
+        ["🟡  Laag", f"{n_low}",
+         "Beperkt risico. Opnemen in de normale verbeteragenda."],
+        ["🟢  Geslaagd", f"{n_pass}",
+         "Geen problemen gevonden op dit onderdeel."],
+    ]
+    overzicht_table = Table(overzicht_data, colWidths=[4 * cm, 2 * cm, 10 * cm])
+    overzicht_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2c3e6b")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#fff5f5"), colors.white,
+                                               colors.HexColor("#fffbf0"), colors.HexColor("#f0fff4")]),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    story.append(overzicht_table)
+    story.append(Spacer(1, 0.4 * cm))
+
+    # ---- Belangrijkste bevindingen (dynamisch) -------------------------
+    story.append(Paragraph("Belangrijkste bevindingen", style_h2))
+
+    # Groepeer kritieke en hoge bevindingen per categorie
+    kritieke = [c for c in failed_checks if c.severity in ("critical", "high")]
+    if kritieke:
+        story.append(Paragraph(
+            "De onderstaande beveiligingsproblemen zijn als <b>kritiek of hoog</b> beoordeeld "
+            "en vragen om de snelste opvolging:",
+            style_normal
+        ))
+        for check in kritieke[:8]:  # max 8 bullets om het leesbaar te houden
+            cat_naam = OWASP_NAMES.get(check.owasp_category, check.owasp_category)
+            ernst = "Kritiek" if check.severity == "critical" else "Hoog"
+            story.append(Paragraph(
+                f"• <b>{check.check_name}</b> [{ernst}] — {check.description}",
+                style_bullet
+            ))
+        if len(kritieke) > 8:
+            story.append(Paragraph(
+                f"  … en nog {len(kritieke) - 8} andere kritieke/hoge bevindingen. "
+                f"Zie de gedetailleerde bevindingen verderop in dit rapport.",
+                style_bullet
+            ))
+    else:
+        story.append(Paragraph(
+            "Er zijn geen kritieke of hoge beveiligingsproblemen vastgesteld. "
+            "Dit is een positief teken — de basisbeveiliging is op orde.",
+            style_normal
+        ))
+    story.append(Spacer(1, 0.3 * cm))
+
+    # Categorieën met de meeste problemen
+    cat_fails: dict[str, int] = {}
+    for c in failed_checks + warning_checks:
+        cat_fails[c.owasp_category] = cat_fails.get(c.owasp_category, 0) + 1
+    top_cats = sorted(cat_fails.items(), key=lambda x: x[1], reverse=True)[:4]
+
+    if top_cats:
+        story.append(Paragraph("Aandachtsgebieden", style_h2))
+        story.append(Paragraph(
+            "De volgende gebieden scoren het minst goed en verdienen extra aandacht:",
+            style_normal
+        ))
+        for cat_id, count in top_cats:
+            cat_naam = OWASP_NAMES.get(cat_id, cat_id)
+            uitleg = _cat_uitleg_nl(cat_id)
+            story.append(Paragraph(
+                f"• <b>{cat_naam}</b> ({count} bevinding{'en' if count != 1 else ''}) — {uitleg}",
+                style_bullet
+            ))
+        story.append(Spacer(1, 0.3 * cm))
+
+    # ---- GDPR/AVG-paragraaf --------------------------------------------
+    gdpr_fails = [c for c in failed_checks + warning_checks if c.owasp_category == "GDPR"]
+    gdpr_pass = [c for c in all_checks if c.owasp_category == "GDPR" and c.status == "pass"]
+    if gdpr_fails or gdpr_pass:
+        story.append(Paragraph("Privacy en AVG/GDPR", style_h2))
+        if gdpr_fails:
+            story.append(Paragraph(
+                f"Er zijn <b>{len(gdpr_fails)} privacygerelateerde aandachtspunten</b> gevonden. "
+                f"De AVG (Algemene Verordening Gegevensbescherming) verplicht organisaties om "
+                f"persoonsgegevens zorgvuldig te beschermen. Overtredingen kunnen leiden tot "
+                f"hoge boetes (tot 4% van de wereldwijde jaaromzet) en reputatieschade. "
+                f"Bekende knelpunten uit deze scan zijn onder andere:",
+                style_normal
+            ))
+            for check in gdpr_fails[:5]:
+                story.append(Paragraph(f"• {check.check_name}: {check.description}", style_bullet))
+        else:
+            story.append(Paragraph(
+                "Op het gebied van privacy en AVG/GDPR zijn geen directe problemen vastgesteld. "
+                "Dit is een positief signaal richting toezichthouders en bezoekers van de website.",
+                style_normal
+            ))
+
+    # ---- Advies aan het management -------------------------------------
+    story.append(Paragraph("Advies aan het management", style_h2))
+    adviezen = []
+    if n_critical + n_high > 0:
+        adviezen.append(
+            f"Los de <b>{n_critical + n_high} kritieke en hoge bevindingen</b> zo snel mogelijk op. "
+            f"Wijs een verantwoordelijke aan en stel een deadline van maximaal twee weken."
+        )
+    if n_medium > 0:
+        adviezen.append(
+            f"Plan de <b>{n_medium} gemiddelde bevindingen</b> in binnen de komende maand. "
+            f"Neem ze op in de backlog van het ontwikkelteam of de leverancier."
+        )
+    if gdpr_fails:
+        adviezen.append(
+            "Bespreek de privacybevindingen met de Functionaris Gegevensbescherming (FG) of "
+            "een privacyjurist om te beoordelen of er meldplicht of andere verplichtingen gelden."
+        )
+    adviezen.append(
+        "Voer periodiek (minimaal elk kwartaal) een herhaalscan uit om te controleren of "
+        "verbeteringen effect hebben gehad en om nieuwe kwetsbaarheden tijdig te signaleren."
+    )
+    adviezen.append(
+        "Laat kritieke bevindingen valideren door een gecertificeerde beveiligingsspecialist "
+        "voordat definitieve conclusies worden getrokken."
+    )
+    for advies in adviezen:
+        story.append(Paragraph(f"• {advies}", style_bullet))
+
+    story.append(Spacer(1, 0.5 * cm))
+    story.append(Paragraph(
+        "<i>Dit rapport is automatisch gegenereerd door Fortrisk CyberScan. "
+        "De resultaten zijn indicatief en dienen te worden beoordeeld door een gekwalificeerde beveiligingsprofessional. "
+        "Fortrisk aanvaardt geen aansprakelijkheid voor beslissingen die uitsluitend op basis van dit rapport worden genomen.</i>",
+        style_small
+    ))
+    return story
+
+
+def _cat_uitleg_nl(cat_id: str) -> str:
+    """Eenvoudige managementuitleg per OWASP-categorie in het Nederlands."""
+    uitleg = {
+        "A01": "Niet alle pagina's en functies zijn goed afgeschermd. Onbevoegden kunnen mogelijk bij informatie die niet voor hen bedoeld is.",
+        "A02": "Gegevens worden niet overal even veilig versleuteld verstuurd of opgeslagen. Dit maakt onderschepping makkelijker.",
+        "A03": "De website accepteert mogelijk schadelijke invoer van gebruikers, waarmee aanvallers de website kunnen manipuleren.",
+        "A04": "De opzet van bepaalde functies bevat beveiligingsgaten die bij het ontwerp hadden moeten worden voorkomen.",
+        "A05": "De technische instellingen van de website staan niet optimaal afgesteld, waardoor onnodige risico's ontstaan.",
+        "A06": "De website maakt gebruik van software-onderdelen met bekende beveiligingsproblemen die nog niet zijn bijgewerkt.",
+        "A07": "Het inlogsysteem heeft zwakke plekken waardoor aanvallers accounts kunnen overnemen of omzeilen.",
+        "A08": "Er is onvoldoende controle of de software en data die de website gebruikt wel authentiek en ongewijzigd zijn.",
+        "A09": "Verdachte gebeurtenissen worden onvoldoende bijgehouden, waardoor aanvallen moeilijk te detecteren zijn.",
+        "A10": "De website kan worden misbruikt om namens zichzelf verzoeken te sturen naar interne systemen.",
+        "GDPR": "Er zijn privacygerelateerde tekortkomingen gevonden die mogelijk in strijd zijn met de AVG-wetgeving.",
+    }
+    return uitleg.get(cat_id, "Zie de gedetailleerde bevindingen voor meer informatie.")
+
+
 def generate_pdf_report(scan_id: int) -> bytes:
     """Generate a professional PDF report using ReportLab."""
     from app.models import Scan, ScanCheck
@@ -186,7 +456,7 @@ def generate_pdf_report(scan_id: int) -> bytes:
         leftMargin=2 * cm,
         topMargin=2 * cm,
         bottomMargin=2 * cm,
-        title=f"WebSecCheck Report — Scan #{scan_id}",
+        title=f"Fortrisk CyberScan Rapport — Scan #{scan_id}",
     )
 
     styles = getSampleStyleSheet()
@@ -201,24 +471,27 @@ def generate_pdf_report(scan_id: int) -> bytes:
     completed = scan.completed_at.strftime("%Y-%m-%d %H:%M UTC") if scan.completed_at else "N/A"
     risk = scan.risk_score
 
+    failed_checks = [c for c in checks if c.status == "fail"]
+    warning_checks = [c for c in checks if c.status == "warning"]
+
     # ------------------------------------------------------------------
     # Cover page
     # ------------------------------------------------------------------
     story.append(Spacer(1, 3 * cm))
-    story.append(Paragraph("WebSecCheck", style_title))
-    story.append(Paragraph("OWASP Top 10 + GDPR Technical Measures Security Assessment Report", styles["Heading2"]))
-    story.append(HRFlowable(width="100%", thickness=2, color=colors.darkblue))
+    story.append(Paragraph("Fortrisk CyberScan", style_title))
+    story.append(Paragraph("Beveiligingsrapport — OWASP Top 10 &amp; AVG/GDPR", styles["Heading2"]))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#2c3e6b")))
     story.append(Spacer(1, 1 * cm))
 
     cover_data = [
-        ["Target URL:", target],
+        ["Doelwebsite:", target],
         ["Scan ID:", str(scan_id)],
-        ["Completed:", completed],
-        ["Risk Score:", f"{risk:.0f} / 100"],
-        ["Total Checks:", str(scan.total_checks)],
-        ["Failed:", str(scan.failed_checks)],
-        ["Warnings:", str(scan.warning_checks)],
-        ["Passed:", str(scan.passed_checks)],
+        ["Voltooid op:", completed],
+        ["Risicoscore:", f"{risk:.0f} / 100"],
+        ["Totaal controles:", str(scan.total_checks)],
+        ["Mislukt:", str(scan.failed_checks)],
+        ["Waarschuwingen:", str(scan.warning_checks)],
+        ["Geslaagd:", str(scan.passed_checks)],
     ]
     cover_table = Table(cover_data, colWidths=[4 * cm, 12 * cm])
     cover_table.setStyle(TableStyle([
@@ -232,62 +505,15 @@ def generate_pdf_report(scan_id: int) -> bytes:
     story.append(PageBreak())
 
     # ------------------------------------------------------------------
-    # Executive Summary
+    # Managementsamenvatting (uitgebreid, Nederlandstalig)
     # ------------------------------------------------------------------
-    story.append(Paragraph("Executive Summary", style_h1))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
-    story.append(Spacer(1, 0.3 * cm))
-
-    failed_checks = [c for c in checks if c.status == "fail"]
-    warning_checks = [c for c in checks if c.status == "warning"]
-
-    if risk >= 70:
-        risk_summary = "HIGH RISK — Immediate action required."
-        risk_color = colors.red
-    elif risk >= 40:
-        risk_summary = "MEDIUM RISK — Security improvements recommended."
-        risk_color = colors.orange
-    else:
-        risk_summary = "LOW RISK — Minor improvements suggested."
-        risk_color = colors.green
-
-    story.append(Paragraph(f"Risk Score: {risk:.0f}/100 — {risk_summary}", style_normal))
-    story.append(Spacer(1, 0.5 * cm))
-    story.append(Paragraph(
-        f"This automated security assessment scanned {target} across all OWASP Top 10 (2021) "
-        f"categories and GDPR Technical Measures. "
-        f"{len(failed_checks)} checks failed and {len(warning_checks)} warnings were identified.",
-        style_normal
-    ))
-    story.append(Spacer(1, 1 * cm))
-
-    # Summary table
-    summary_data = [
-        ["Severity", "Failed", "Warning"],
-    ]
-    for sev in ["critical", "high", "medium", "low", "info"]:
-        f_count = sum(1 for c in failed_checks if c.severity == sev)
-        w_count = sum(1 for c in warning_checks if c.severity == sev)
-        if f_count or w_count:
-            summary_data.append([sev.capitalize(), str(f_count), str(w_count)])
-
-    if len(summary_data) > 1:
-        sum_table = Table(summary_data, colWidths=[5 * cm, 3 * cm, 3 * cm])
-        sum_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-        ]))
-        story.append(sum_table)
-
+    story.extend(_management_samenvatting(target, risk, failed_checks, warning_checks, checks, scan))
     story.append(PageBreak())
 
     # ------------------------------------------------------------------
-    # Findings per OWASP category
+    # Gedetailleerde bevindingen per categorie
     # ------------------------------------------------------------------
-    story.append(Paragraph("Detailed Findings", style_h1))
+    story.append(Paragraph("Gedetailleerde bevindingen", style_h1))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
     story.append(Spacer(1, 0.5 * cm))
 
@@ -301,16 +527,17 @@ def generate_pdf_report(scan_id: int) -> bytes:
         story.append(Paragraph(f"{cat_id} — {cat_name}", style_h2))
 
         for check in cat_checks:
-            sev_color_rgb = SEVERITY_COLORS.get(check.severity, (0.5, 0.5, 0.5))
-            sev_color = colors.Color(*sev_color_rgb)
-
             check_data = [
                 [Paragraph(f"<b>{check.check_name}</b>", style_normal),
-                 Paragraph(f"<font color='{'red' if check.status == 'fail' else 'orange' if check.status == 'warning' else 'green'}'><b>{check.status.upper()}</b></font>  [{check.severity.upper()}]", style_normal)],
+                 Paragraph(
+                     f"<font color='{'red' if check.status == 'fail' else 'orange' if check.status == 'warning' else 'green'}'>"
+                     f"<b>{check.status.upper()}</b></font>  [{check.severity.upper()}]",
+                     style_normal
+                 )],
                 [Paragraph(check.description or "", style_small), ""],
             ]
             if check.remediation:
-                check_data.append([Paragraph(f"<i>Remediation: {check.remediation[:200]}</i>", style_small), ""])
+                check_data.append([Paragraph(f"<i>Aanbeveling: {check.remediation[:200]}</i>", style_small), ""])
 
             check_table = Table(check_data, colWidths=[11 * cm, 5 * cm])
             check_table.setStyle(TableStyle([
@@ -326,14 +553,14 @@ def generate_pdf_report(scan_id: int) -> bytes:
         story.append(Spacer(1, 0.5 * cm))
 
     # ------------------------------------------------------------------
-    # Remediation table
+    # Actielijst (voorheen: Remediation Recommendations)
     # ------------------------------------------------------------------
     story.append(PageBreak())
-    story.append(Paragraph("Remediation Recommendations", style_h1))
+    story.append(Paragraph("Actielijst", style_h1))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
     story.append(Spacer(1, 0.5 * cm))
 
-    rem_data = [["Category", "Check", "Severity", "Recommendation"]]
+    rem_data = [["Categorie", "Bevinding", "Ernst", "Aanbevolen actie"]]
     for check in sorted(failed_checks + warning_checks, key=lambda c: (
         ["critical", "high", "medium", "low", "info"].index(c.severity)
     )):
@@ -348,7 +575,7 @@ def generate_pdf_report(scan_id: int) -> bytes:
     if len(rem_data) > 1:
         rem_table = Table(rem_data, colWidths=[1.5 * cm, 4 * cm, 2 * cm, 9 * cm])
         rem_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2c3e6b")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, -1), 8),
@@ -360,8 +587,8 @@ def generate_pdf_report(scan_id: int) -> bytes:
 
     story.append(Spacer(1, 1 * cm))
     story.append(Paragraph(
-        "This report was generated automatically by WebSecCheck. "
-        "Results are indicative and should be validated by a qualified security professional.",
+        "Dit rapport is automatisch gegenereerd door Fortrisk CyberScan. "
+        "De resultaten zijn indicatief en dienen te worden beoordeeld door een gekwalificeerde beveiligingsprofessional.",
         style_small,
     ))
 
