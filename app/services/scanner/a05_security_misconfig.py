@@ -77,8 +77,17 @@ class A05SecurityMisconfigScanner(BaseScanner):
             misconfigured = []
             present = []
 
+            csp_value = response.headers.get('Content-Security-Policy', '')
+
             for header_name, config in required_headers.items():
                 value = response.headers.get(header_name, '')
+
+                # X-Frame-Options may be replaced by CSP frame-ancestors (modern equivalent)
+                if header_name == 'X-Frame-Options' and not value:
+                    if 'frame-ancestors' in csp_value.lower():
+                        present.append(f"X-Frame-Options: covered by CSP frame-ancestors")
+                        continue
+
                 if not value:
                     missing.append(f"{header_name} ({config['description']})")
                 else:
