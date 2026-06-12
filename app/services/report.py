@@ -38,6 +38,7 @@ OWASP_NAMES = {
     "A08": "Software and Data Integrity Failures",
     "A09": "Security Logging and Monitoring Failures",
     "A10": "Server-Side Request Forgery (SSRF)",
+    "GDPR": "GDPR Technical Measures",
 }
 
 
@@ -106,7 +107,7 @@ def generate_html_summary(scan_id: int) -> str:
 <body style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px">
     <div style="background:#1a1a2e;color:white;padding:20px;border-radius:8px;margin-bottom:20px">
         <h1 style="margin:0">WebSecCheck Security Report</h1>
-        <p style="margin:5px 0 0">OWASP Top 10 Automated Security Scan</p>
+        <p style="margin:5px 0 0">OWASP Top 10 + GDPR Technical Measures Security Scan</p>
     </div>
 
     <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:20px">
@@ -205,7 +206,7 @@ def generate_pdf_report(scan_id: int) -> bytes:
     # ------------------------------------------------------------------
     story.append(Spacer(1, 3 * cm))
     story.append(Paragraph("WebSecCheck", style_title))
-    story.append(Paragraph("OWASP Top 10 Security Assessment Report", styles["Heading2"]))
+    story.append(Paragraph("OWASP Top 10 + GDPR Technical Measures Security Assessment Report", styles["Heading2"]))
     story.append(HRFlowable(width="100%", thickness=2, color=colors.darkblue))
     story.append(Spacer(1, 1 * cm))
 
@@ -254,7 +255,8 @@ def generate_pdf_report(scan_id: int) -> bytes:
     story.append(Spacer(1, 0.5 * cm))
     story.append(Paragraph(
         f"This automated security assessment scanned {target} across all OWASP Top 10 (2021) "
-        f"categories. {len(failed_checks)} checks failed and {len(warning_checks)} warnings were identified.",
+        f"categories and GDPR Technical Measures. "
+        f"{len(failed_checks)} checks failed and {len(warning_checks)} warnings were identified.",
         style_normal
     ))
     story.append(Spacer(1, 1 * cm))

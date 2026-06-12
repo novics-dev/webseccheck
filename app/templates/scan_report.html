@@ -71,19 +71,21 @@
 </div>
 
 <!-- Findings by category -->
-{% for cat_id in ['A01','A02','A03','A04','A05','A06','A07','A08','A09','A10'] %}
+{% set owasp_names = {
+    'A01':'Broken Access Control','A02':'Cryptographic Failures',
+    'A03':'Injection','A04':'Insecure Design',
+    'A05':'Security Misconfiguration','A06':'Vulnerable Components',
+    'A07':'Auth Failures','A08':'Integrity Failures',
+    'A09':'Logging Failures','A10':'SSRF',
+    'GDPR':'GDPR Technical Measures'} %}
+{% for cat_id in ['A01','A02','A03','A04','A05','A06','A07','A08','A09','A10','GDPR'] %}
 {% if cat_id in categories %}
 {% set cat_checks = categories[cat_id] %}
 <div class="card mb-3">
-    <div class="card-header category-header d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center {% if cat_id == 'GDPR' %}text-white{% else %}category-header{% endif %}"
+         {% if cat_id == 'GDPR' %}style="background:#5c3d8f;"{% endif %}>
         <h5 class="mb-0">
-            <span class="badge bg-secondary me-2">{{ cat_id }}</span>
-            {% set owasp_names = {
-                'A01':'Broken Access Control','A02':'Cryptographic Failures',
-                'A03':'Injection','A04':'Insecure Design',
-                'A05':'Security Misconfiguration','A06':'Vulnerable Components',
-                'A07':'Auth Failures','A08':'Integrity Failures',
-                'A09':'Logging Failures','A10':'SSRF'} %}
+            <span class="badge {% if cat_id == 'GDPR' %}bg-light text-dark{% else %}bg-secondary{% endif %} me-2">{{ cat_id }}</span>
             {{ owasp_names.get(cat_id, cat_id) }}
         </h5>
         <div>
