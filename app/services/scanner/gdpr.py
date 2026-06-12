@@ -71,6 +71,18 @@ CONSENT_PATTERNS = [
 ]
 
 
+# Browser-like headers to avoid WAF/CDN blocking of scanner User-Agent
+BROWSER_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/124.0.0.0 Safari/537.36'
+    ),
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7',
+}
+
+
 class GDPRScanner(BaseScanner):
 
     @property
@@ -89,17 +101,28 @@ class GDPRScanner(BaseScanner):
         )
 
     def _fetch_html(self, url: str) -> tuple[str, object]:
-        """Return (html_text, response). html is empty string on failure."""
-        resp = self.make_request(url, timeout=12)
+        """Return (html_text, response) using browser-like headers. html is empty string on failure."""
+        resp = self.make_request(url, headers=BROWSER_HEADERS, timeout=15)
         if resp and resp.status_code == 200:
             return resp.text, resp
+        # Follow redirects that land on non-200 (e.g. site returns 200 via redirect chain)
+        # make_request already follows redirects, so if we still get non-200, accept text anyway
+        if resp and resp.status_code in (301, 302, 403):
+            return '', resp
+        if resp and len(resp.text) > 500:
+            # Some servers return non-standard codes but real HTML content
+            return resp.text, resp
         return '', resp
+
+    # Shared main-page HTML cache (populated in run(), used by all checks)
+    _main_html: str = ''
+    _main_resp: object = None
 
     def check_cookie_consent(self, url: str) -> dict:
         """Detect presence of cookie consent mechanism."""
         start = time.time()
         try:
-            html, _ = self._fetch_html(url)
+            html = self._main_html
             duration_ms = int((time.time() - start) * 1000)
             if not html:
                 return self.create_check(
@@ -172,7 +195,7 @@ class GDPRScanner(BaseScanner):
         """Check for accessible privacy policy link."""
         start = time.time()
         try:
-            html, _ = self._fetch_html(url)
+            html = self._main_html
             duration_ms = int((time.time() - start) * 1000)
             if not html:
                 return self.create_check(
@@ -243,7 +266,7 @@ class GDPRScanner(BaseScanner):
         """Look for DPO or privacy contact information."""
         start = time.time()
         try:
-            html, _ = self._fetch_html(url)
+            html = self._main_html
 
             # Also check common privacy/contact paths AND any privacy link found in HTML
             base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
@@ -316,7 +339,7 @@ class GDPRScanner(BaseScanner):
         """Detect third-party tracking scripts in page HTML."""
         start = time.time()
         try:
-            html, _ = self._fetch_html(url)
+            html = self._main_html
             duration_ms = int((time.time() - start) * 1000)
             if not html:
                 return self.create_check(
@@ -365,7 +388,7 @@ class GDPRScanner(BaseScanner):
         """Detect Google Fonts loaded without local hosting (sends visitor IP to Google)."""
         start = time.time()
         try:
-            html, _ = self._fetch_html(url)
+            html = self._main_html
             duration_ms = int((time.time() - start) * 1000)
             if not html:
                 return self.create_check(
@@ -523,7 +546,7 @@ class GDPRScanner(BaseScanner):
         """Check Referrer-Policy header to prevent personal data leakage in Referer."""
         start = time.time()
         try:
-            resp = self.make_request(url, timeout=10)
+            resp = self._main_resp
             duration_ms = int((time.time() - start) * 1000)
             if not resp:
                 return self.create_check(
@@ -577,6 +600,9 @@ class GDPRScanner(BaseScanner):
             )
 
     def run(self, target_url: str, scan_id: int, db_session) -> list:
+        # Fetch the main page once with browser-like headers; share across all checks
+        self._main_html, self._main_resp = self._fetch_html(target_url)
+
         checks = []
         checks.append(self.check_cookie_consent(target_url))
         checks.append(self.check_privacy_policy(target_url))
