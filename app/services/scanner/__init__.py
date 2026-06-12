@@ -23,6 +23,7 @@ from app.services.scanner.a07_auth_failures import A07AuthFailuresScanner
 from app.services.scanner.a08_integrity import A08IntegrityScanner
 from app.services.scanner.a09_logging import A09LoggingScanner
 from app.services.scanner.a10_ssrf import A10SSRFScanner
+from app.services.scanner.gdpr import GDPRScanner
 
 _SCANNER_CLASSES = [
     A01AccessControlScanner,
@@ -39,6 +40,7 @@ _SCANNER_CLASSES = [
     A08IntegrityScanner,
     A09LoggingScanner,
     A10SSRFScanner,
+    GDPRScanner,
 ]
 
 

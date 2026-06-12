@@ -354,10 +354,11 @@ class CheckSeverity:
     ALL = (CRITICAL, HIGH, MEDIUM, LOW, INFO)
 
 
-# OWASP Top 10 2021 category identifiers
+# OWASP Top 10 2021 category identifiers + additional frameworks
 OWASP_CATEGORIES = (
     "A01", "A02", "A03", "A04", "A05",
     "A06", "A07", "A08", "A09", "A10",
+    "GDPR",
 )
 
 
