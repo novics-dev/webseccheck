@@ -113,21 +113,28 @@ class A01AccessControlScanner(BaseScanner):
                 exposed.append({"path": path, "status": resp.status_code})
 
         duration_ms = int((time.time() - start) * 1000)
-        if any(e["status"] == 200 for e in exposed):
+        # 200 = truly accessible without auth → fail
+        open_paths = [e for e in exposed if e["status"] == 200]
+        # 301/302 = redirect (often to login) → acceptable, note as info
+        redirect_paths = [e for e in exposed if e["status"] in (301, 302)]
+        # 403 = path exists but access correctly denied → this is GOOD security
+
+        if open_paths:
             return [self.create_check(
                 "A01", "Admin Path Discovery", "fail", "high",
-                f"Admin or sensitive paths are accessible: {[e['path'] for e in exposed if e['status'] == 200]}",
+                f"Admin or sensitive paths are accessible without authentication: "
+                f"{[e['path'] for e in open_paths]}",
                 details={"exposed_paths": exposed},
                 remediation="Restrict access to admin paths using IP allowlists or strong authentication.",
-                evidence=str(exposed),
+                evidence=str(open_paths),
                 duration_ms=duration_ms,
             )]
-        elif exposed:
+        elif redirect_paths:
             return [self.create_check(
-                "A01", "Admin Path Discovery", "warning", "medium",
-                f"Some admin paths exist but may be restricted (403): {[e['path'] for e in exposed]}",
-                details={"exposed_paths": exposed},
-                remediation="Ensure admin paths are not discoverable or accessible without authentication.",
+                "A01", "Admin Path Discovery", "info", "low",
+                f"Admin paths redirect (likely to login page): {[e['path'] for e in redirect_paths]}",
+                details={"redirect_paths": redirect_paths},
+                remediation="Verify redirects lead to authenticated login and not a bypass.",
                 duration_ms=duration_ms,
             )]
         return [self.create_check(

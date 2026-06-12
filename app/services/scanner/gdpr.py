@@ -53,11 +53,21 @@ DPO_EMAIL_PATTERNS = [
 ]
 
 CONSENT_PATTERNS = [
+    # Generic terms
     'cookieconsent', 'cookie-consent', 'cookie_consent',
     'cookiebanner', 'cookie-banner', 'cookie_banner',
-    'cookienotice', 'gdpr', 'consent-manager', 'consentmanager',
+    'cookienotice', 'cookie-notice', 'cookie_notice',
+    'gdpr', 'consent-manager', 'consentmanager',
+    # Major CMPs
     'tarteaucitron', 'cookiebot', 'onetrust', 'axeptio',
     'cookieinformation', 'usercentrics', 'didomi',
+    'cookiefirst', 'cookieyes', 'iubenda', 'klaro',
+    'borlabs-cookie', 'complianz', 'cookie-law-info',
+    'nc_cookies', 'moove_gdpr',
+    # HTML patterns (CMP-blocked scripts use type="text/plain")
+    'type="text/plain"', "type='text/plain'",
+    # Data attributes used by CMPs
+    'data-cookieconsent', 'data-cookie-consent', 'data-cmp',
 ]
 
 
@@ -132,6 +142,32 @@ class GDPRScanner(BaseScanner):
                 duration_ms=int((time.time() - start) * 1000),
             )
 
+    # Privacy-related keywords for href matching (Dutch + English)
+    PRIVACY_HREF_TERMS = [
+        'privac', 'cookie', 'gdpr', 'avg', 'beleid', 'voorwaarden',
+        'legal', 'disclaimer', 'terms', 'datenschutz', 'datapolicy',
+        'gegevensbescherming', 'privacystatement', 'privacyverklaring',
+    ]
+
+    def _extract_privacy_links(self, html: str, base: str) -> list[str]:
+        """Extract and resolve hrefs from HTML that look like privacy policy links."""
+        hrefs = re.findall(r'href=["\']([^"\']+)["\']', html, re.IGNORECASE)
+        found = []
+        for href in hrefs:
+            href_lower = href.lower()
+            if any(term in href_lower for term in self.PRIVACY_HREF_TERMS):
+                # Build absolute URL
+                if href.startswith('http'):
+                    abs_url = href
+                elif href.startswith('//'):
+                    abs_url = 'https:' + href
+                elif href.startswith('/'):
+                    abs_url = base + href
+                else:
+                    abs_url = base + '/' + href
+                found.append(abs_url)
+        return list(dict.fromkeys(found))  # deduplicate, preserve order
+
     def check_privacy_policy(self, url: str) -> dict:
         """Check for accessible privacy policy link."""
         start = time.time()
@@ -146,31 +182,41 @@ class GDPRScanner(BaseScanner):
                     duration_ms=duration_ms,
                 )
 
-            found_links = []
-            for pattern in PRIVACY_LINK_PATTERNS:
-                matches = re.findall(pattern, html, re.IGNORECASE)
-                found_links.extend(matches[:2])
-
-            # Also probe common paths
             base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
-            probed_paths = []
-            for path in ['/privacy', '/privacy-policy', '/privacybeleid',
-                         '/privacyverklaring', '/cookie-policy', '/gdpr']:
-                resp = self.make_request(urljoin(base, path), timeout=6)
-                if resp and resp.status_code == 200 and len(resp.text) > 200:
-                    probed_paths.append(path)
 
-            if found_links or probed_paths:
+            # 1. Extract privacy-looking hrefs from HTML and verify they resolve
+            candidate_links = self._extract_privacy_links(html, base)
+            verified_links = []
+            for link_url in candidate_links[:6]:  # limit probes
+                resp = self.make_request(link_url, timeout=6)
+                if resp and resp.status_code == 200 and len(resp.text) > 200:
+                    verified_links.append(link_url)
+
+            # 2. Probe common paths as fallback
+            probed_paths = []
+            if not verified_links:
+                for path in [
+                    '/privacy', '/privacy-policy', '/privacybeleid',
+                    '/privacyverklaring', '/privacy-statement', '/privacystatement',
+                    '/cookie-policy', '/cookiebeleid', '/gdpr', '/legal',
+                    '/disclaimer', '/algemene-voorwaarden',
+                ]:
+                    resp = self.make_request(urljoin(base, path), timeout=6)
+                    if resp and resp.status_code == 200 and len(resp.text) > 200:
+                        probed_paths.append(path)
+
+            if verified_links or probed_paths:
+                evidence = verified_links[0] if verified_links else probed_paths[0]
                 return self.create_check(
                     owasp_category='GDPR', check_name='Privacy Policy',
                     status='pass', severity='high',
                     description='Privacy policy link or page found.',
                     details=(
-                        f"Links in HTML: {len(found_links)}. "
-                        f"Accessible paths: {', '.join(probed_paths) or 'none probed'}."
+                        f"Links found in HTML: {len(candidate_links)}. "
+                        f"Verified accessible: {', '.join(verified_links[:2]) or ', '.join(probed_paths[:2])}."
                     ),
-                    evidence=', '.join(probed_paths) or found_links[0] if found_links else '',
-                    duration_ms=duration_ms,
+                    evidence=evidence,
+                    duration_ms=int((time.time() - start) * 1000),
                 )
 
             return self.create_check(
@@ -183,7 +229,7 @@ class GDPRScanner(BaseScanner):
                     'Required under GDPR Article 13/14. Include: data categories, purposes, '
                     'legal basis, retention periods, data subject rights, and DPO contact.'
                 ),
-                duration_ms=duration_ms,
+                duration_ms=int((time.time() - start) * 1000),
             )
         except Exception as exc:
             return self.create_check(
@@ -199,10 +245,18 @@ class GDPRScanner(BaseScanner):
         try:
             html, _ = self._fetch_html(url)
 
-            # Also check /privacy and /contact pages
+            # Also check common privacy/contact paths AND any privacy link found in HTML
             base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
-            for path in ['/privacy', '/privacy-policy', '/privacybeleid', '/contact']:
+            extra_paths = [
+                '/privacy', '/privacy-policy', '/privacybeleid', '/privacyverklaring',
+                '/privacystatement', '/contact', '/contact-us', '/over-ons',
+            ]
+            for path in extra_paths:
                 extra, _ = self._fetch_html(urljoin(base, path))
+                html += extra
+            # Also follow privacy links found in main page HTML
+            for link_url in self._extract_privacy_links(html, base)[:3]:
+                extra, _ = self._fetch_html(link_url)
                 html += extra
 
             duration_ms = int((time.time() - start) * 1000)
