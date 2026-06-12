@@ -171,6 +171,19 @@ class GDPRScanner(BaseScanner):
                     found.append(base + href)
         return list(dict.fromkeys(found))
 
+    def _find_in_sitemap(self, base: str) -> str | None:
+        """Parse sitemap.xml and return the first privacy-related URL found."""
+        for path in ['/sitemap.xml', '/sitemap_index.xml', '/page-sitemap.xml']:
+            resp = self._get(urljoin(base, path), timeout=8)
+            if not resp or resp.status_code != 200:
+                continue
+            # Find all <loc> entries
+            urls = re.findall(r'<loc>([^<]+)</loc>', resp.text)
+            for u in urls:
+                if any(term in u.lower() for term in PRIVACY_HREF_TERMS):
+                    return u
+        return None
+
     def _probe_url(self, url: str) -> bool:
         """Return True if URL returns HTTP 200 with substantial content."""
         resp = self._get(url, timeout=8)
@@ -181,8 +194,13 @@ class GDPRScanner(BaseScanner):
     # ------------------------------------------------------------------ #
 
     def run(self, target_url: str, scan_id: int, db_session) -> list:
-        self._main_html = self._html(target_url)
-        self._main_resp = self._get(target_url) if not self._main_html else None
+        # Fetch main page once; store both html and response object
+        self._main_resp = self._get(target_url)
+        self._main_html = (
+            self._main_resp.text
+            if self._main_resp and self._main_resp.status_code == 200
+            else ''
+        )
 
         checks = []
         checks.append(self.check_cookie_consent(target_url))
@@ -251,41 +269,46 @@ class GDPRScanner(BaseScanner):
             )
 
     def check_privacy_policy(self, url: str) -> dict:
-        """Check for accessible privacy policy — always probes paths, never fails on HTML fetch."""
+        """Check for accessible privacy policy — never fails on HTML fetch, checks sitemap too."""
         start = time.time()
         try:
             base = self._base(url)
             html = self._main_html
+            found_url = None
+            method = ''
 
-            # Step 1: extract links from HTML (best effort — skip if HTML unavailable)
-            candidate_links = self._extract_privacy_links(html, base) if html else []
+            # Step 1: sitemap.xml — most reliable (Webflow, WordPress, etc. auto-generate it)
+            sitemap_url = self._find_in_sitemap(base)
+            if sitemap_url:
+                found_url = sitemap_url
+                method = f'sitemap.xml → {sitemap_url}'
 
-            # Step 2: verify extracted links actually resolve to real pages
-            verified_links = []
-            for link_url in candidate_links[:8]:
-                if self._probe_url(link_url):
-                    verified_links.append(link_url)
-                    break  # one confirmed link is enough
+            # Step 2: extract privacy-looking hrefs from page HTML
+            if not found_url and html:
+                for link_url in self._extract_privacy_links(html, base)[:8]:
+                    if self._probe_url(link_url):
+                        found_url = link_url
+                        method = f'HTML link → {link_url}'
+                        break
 
-            # Step 3: probe common paths (always runs, not just as fallback)
-            probed_paths = []
-            for path in PRIVACY_PATHS:
-                resp = self._get(urljoin(base, path), timeout=7)
-                if resp and resp.status_code == 200 and len(resp.text) > 200:
-                    probed_paths.append(path)
-                    break  # one confirmed path is enough
+            # Step 3: probe common privacy paths directly
+            if not found_url:
+                for path in PRIVACY_PATHS:
+                    resp = self._get(urljoin(base, path), timeout=7)
+                    if resp and resp.status_code == 200 and len(resp.text) > 200:
+                        found_url = base + path
+                        method = f'direct pad → {path}'
+                        break
 
             duration_ms = int((time.time() - start) * 1000)
 
-            if verified_links or probed_paths:
-                evidence = verified_links[0] if verified_links else (base + probed_paths[0])
-                html_note = f"{len(candidate_links)} link(s) in HTML." if html else "Hoofdpagina niet bereikbaar; directe padcontrole gebruikt."
+            if found_url:
                 return self.create_check(
                     owasp_category='GDPR', check_name='Privacy Policy',
                     status='pass', severity='high',
                     description='Privacypagina gevonden en bereikbaar.',
-                    details=f"{html_note} Bereikbaar via: {evidence}",
-                    evidence=evidence,
+                    details=f"Gevonden via: {method}",
+                    evidence=found_url,
                     duration_ms=duration_ms,
                 )
 
@@ -294,8 +317,8 @@ class GDPRScanner(BaseScanner):
                 status='fail', severity='high',
                 description='Geen privacypagina gevonden.',
                 details=(
-                    f"Geen privacy-link in HTML en {len(PRIVACY_PATHS)} gangbare paden "
-                    f"gaven geen bereikbare pagina terug."
+                    'Geen privacy-link gevonden via sitemap.xml, HTML-links of '
+                    f'{len(PRIVACY_PATHS)} gangbare paden.'
                 ),
                 remediation=(
                     'Publiceer een privacyverklaring en link er vanuit de footer naartoe. '
